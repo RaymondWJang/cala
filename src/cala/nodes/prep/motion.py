@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 from skimage.filters import difference_of_gaussians
 
 from cala.arrays import AXIS, Frame
-from cala.testing.util import shift_by
 
 
 class Shift(BaseModel):
@@ -75,7 +74,7 @@ class Anchor(BaseModel):
            as the anchor for the next frame
         """
         arr = frame.array
-        prepped = prepare(arr, dog_kwargs=self.dog_kwargs, gauss_kwargs=self.gauss_kwargs)
+        prepped = _prepare(arr, dog_kwargs=self.dog_kwargs, gauss_kwargs=self.gauss_kwargs)
         if not self._has_prereqs:
             self._init(prepped)
             return frame
@@ -114,7 +113,7 @@ class Anchor(BaseModel):
         self._global = (self._global * curr_idx + self._local) / (curr_idx + 1)
 
 
-def prepare(image: xr.DataArray, dog_kwargs: dict, gauss_kwargs: dict) -> xr.DataArray:
+def _prepare(image: xr.DataArray, dog_kwargs: dict, gauss_kwargs: dict) -> xr.DataArray:
     tmp = difference_of_gaussians(image, **dog_kwargs)
     tmp = cv2.normalize(tmp, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
     result = cv2.GaussianBlur(tmp.astype(float), **gauss_kwargs)
@@ -128,41 +127,53 @@ def match_template(
     if image.dtype != np.float32:
         image = image.astype(np.float32)
 
-    h_i, w_i = template.shape
-    ms_h = max_shift_h
-    ms_w = max_shift_w
+    height, width = template.shape
+    max_shift_rows = max_shift_h
+    max_shift_cols = max_shift_w
 
-    templ_crop = template[max_shift_h : h_i - max_shift_h, max_shift_w : w_i - max_shift_w].astype(
-        np.float32
-    )
+    templ_crop = template[
+        max_shift_rows : height - max_shift_rows, max_shift_cols : width - max_shift_cols
+    ].astype(np.float32)
 
     res = cv2.matchTemplate(image, templ_crop, cv2.TM_CCORR_NORMED)
-    top_left = cv2.minMaxLoc(res)[3]
+    peak_col, peak_row = cv2.minMaxLoc(res)[3]
 
-    sh_y, sh_x = top_left
+    if (0 < peak_row < 2 * max_shift_rows - 1) & (0 < peak_col < 2 * max_shift_cols - 1):
+        # if max is internal, check for subpixel shift using gaussian peak registration
 
-    if (0 < top_left[1] < 2 * ms_h - 1) & (0 < top_left[0] < 2 * ms_w - 1):
-        # if max is internal, check for subpixel shift using gaussian
-        # peak registration
-        log_xm1_y = np.log(res[sh_x - 1, sh_y])
-        log_xp1_y = np.log(res[sh_x + 1, sh_y])
-        log_x_ym1 = np.log(res[sh_x, sh_y - 1])
-        log_x_yp1 = np.log(res[sh_x, sh_y + 1])
-        four_log_xy = 4 * np.log(res[sh_x, sh_y])
+        # Near its maximum, a correlation peak often looks approximately like a 2D Gaussian bump
+        # $R(\Delta)\approx A\exp(-\frac{(\Delta-\Delta_0)^2}{2\sigma^2})$
+        # Taking a log turns it into quadratic:
+        # $\log{R(\Delta)}\approx \log{A}-\frac{(\Delta-\Delta_0)^2}{2\sigma^2}$
+        # So if you look at $\log{R}$ at the peak and its immediate neighbors,
+        # you can fit a 1D quadratic in each axis and
+        # estimate the subpixel offset of the true maximum.
 
-        sh_x_n = -(
-            sh_x - ms_h + ((log_xm1_y - log_xp1_y) / (2 * log_xm1_y - four_log_xy + 2 * log_xp1_y))
+        # For a 1D function sampled at -1, 0, +1:
+        # Let $a = \log{R(-1)}, b = \log{R(0)}, c = \log{R(+1)}$
+        # Then the subpixel offset relative to 0 for the parabola's maximum is:
+        # $\delta = \frac{a-c}{2(a-2b+c)}
+        log_up = np.log(res[peak_row - 1, peak_col])
+        log_down = np.log(res[peak_row + 1, peak_col])
+        log_left = np.log(res[peak_row, peak_col - 1])
+        log_right = np.log(res[peak_row, peak_col + 1])
+        log_center = 4 * np.log(res[peak_row, peak_col])
+
+        row_shift = -(
+            peak_row  # integer shift
+            - max_shift_rows  # because of crop
+            + ((log_up - log_down) / (2 * log_up - log_center + 2 * log_down))  # subpixel shift
         )
-        sh_y_n = -(
-            sh_y - ms_w + ((log_x_ym1 - log_x_yp1) / (2 * log_x_ym1 - four_log_xy + 2 * log_x_yp1))
+        col_shift = -(
+            peak_col
+            - max_shift_cols
+            + ((log_left - log_right) / (2 * log_left - log_center + 2 * log_right))
         )
     else:
-        sh_x_n = -(sh_x - ms_h)
-        sh_y_n = -(sh_y - ms_w)
+        row_shift = -(peak_row - max_shift_rows)
+        col_shift = -(peak_col - max_shift_cols)
 
-    shift = np.array([sh_x_n, sh_y_n])
-
-    return shift
+    return np.array([row_shift, col_shift])
 
 
 def apply_shift(image: xr.DataArray, shift: Shift) -> xr.DataArray:
@@ -176,14 +187,3 @@ def apply_shift(image: xr.DataArray, shift: Shift) -> xr.DataArray:
         borderMode=cv2.BORDER_REPLICATE,
     )
     return xr.DataArray(shifted_frame, dims=image.dims, coords=image.coords)
-
-
-def check_shift_validity(
-    source: xr.DataArray, target: xr.DataArray, shift: np.ndarray, threshold: float, func: Callable
-) -> bool:
-    expected = np.array([5, 5])
-    tester = shift_by(source.values, *expected)
-    total = func(tester, target.values)
-    result = total - shift
-    error = np.linalg.norm(result - expected)
-    return error < threshold
