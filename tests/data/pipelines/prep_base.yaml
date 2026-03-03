@@ -33,16 +33,16 @@ nodes:
     type: cala.nodes.prep.Anchor
     depends:
       - frame: lines.frame
-  downsample:
-    type: tube
-    params:
-      tube: cala-downsample
-    depends:
-      - frame: motion.frame
-  ds_noevent:
-    type: cala.util.capture_subgraph_noevent
-    depends:
-      - downsample.value
+  #  downsample:
+  #    type: tube
+  #    params:
+  #      tube: cala-downsample
+  #    depends:
+  #      - frame: motion.frame
+  #  ds_noevent:
+  #    type: cala.util.none_to_noevent
+  #    depends:
+  #      - downsample.value
   denoise:
     type: cala.nodes.prep.blur
     params:
@@ -51,7 +51,7 @@ nodes:
         ksize: [ 9, 9 ]
         sigmaX: 0
     depends:
-      - frame: ds_noevent.value
+      - frame: motion.frame
   glow:
     type: cala.nodes.prep.GlowRemover
     depends:

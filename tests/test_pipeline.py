@@ -5,6 +5,7 @@ from noob import SynchronousRunner, Tube
 from noob.node import Node, NodeSpecification
 
 from cala.arrays import AXIS
+from cala.nodes.io import stream
 
 
 @pytest.fixture(
@@ -124,3 +125,25 @@ def test_reconstructed_movie(results):
     # expected = xr.concat(preprocessed_frames, dim=AXIS.frames_dim)
     # result = (fps.array @ trs.array).transpose(*expected.dims)
     # raise NotImplementedError("Deprecation not implemented")
+
+
+VIDEOS = [
+    "long_recording/0.avi",
+    "long_recording/1.avi",
+    "long_recording/2.avi",
+    "long_recording/3.avi",
+    "long_recording/4.avi",
+    "long_recording/5.avi",
+    "long_recording/6.avi",
+    "long_recording/7.avi",
+    "long_recording/8.avi",
+    "long_recording/9.avi",
+]
+
+
+def test_recursive():
+    gen = stream(VIDEOS[:3])
+    tube = Tube.from_specification("cala-unraveled", {"cell_size": 8})
+    runner = SynchronousRunner(tube)
+    for idx, arr in enumerate(gen):
+        res = runner.process(frame=arr, epoch=idx)

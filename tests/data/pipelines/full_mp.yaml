@@ -61,7 +61,7 @@ nodes:
     depends:
       - frame: frame.value
   pr_noevent:
-    type: cala.util.capture_subgraph_noevent
+    type: cala.util.none_to_noevent
     depends:
       - preprocess.value
 

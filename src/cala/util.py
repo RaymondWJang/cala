@@ -124,7 +124,7 @@ def concatenate_coordinates(left: Coordinates, right: Coordinates) -> dict:
     return combined
 
 
-def capture_subgraph_noevent(value: Any) -> Any:
+def none_to_noevent(value: Any = None) -> Any:
     """
     A temporary WRONG implementation of capturing NoEvent from TubeNodes.
     Needs to be fixed at the noob level: https://github.com/miniscope/noob/issues/162

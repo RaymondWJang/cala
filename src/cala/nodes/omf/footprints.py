@@ -14,7 +14,8 @@ from cala.util import concatenate_coordinates
 
 class Footprinter(BaseModel):
     max_iter: int
-    ratio_lb: float = 0.15
+    ratio_lb: float
+    """low bound for footprint value. values lower than this is floored to zero."""
 
     _logger = init_logger(__name__)
 
