@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 import xarray as xr
-from noob import Name
+from noob import Name, process_method
 from noob.node import Node
 from pydantic import Field
 
@@ -27,12 +27,13 @@ class SliceNMF(Node):
 
     _logger = init_logger(__name__)
 
+    @process_method
     def process(
-        self, residuals: Buffer, energy: xr.DataArray, detect_radius: int
+        self, residuals: Buffer, energy: xr.DataArray, cell_size: int
     ) -> tuple[A[list[Footprint], Name("new_fps")], A[list[Trace], Name("new_trs")]]:
 
         if residuals.array.sizes[AXIS.frame_dim] < self.min_frames:
-            return [], []
+            return None, None
 
         fps = []
         trs = []
@@ -41,9 +42,7 @@ class SliceNMF(Node):
 
         while np.max(energy) >= self.detect_thresh:
             # Find and analyze neighborhood of maximum variance
-            slice_ = self._get_max_energy_slice(
-                arr=res, energy_landscape=energy, radius=detect_radius
-            )
+            slice_ = self._get_max_energy_slice(arr=res, energy_landscape=energy, radius=cell_size)
 
             a_new, c_new = self._local_nmf(
                 slice_=slice_,

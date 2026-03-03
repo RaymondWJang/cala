@@ -25,7 +25,7 @@ def test_process(slice_nmf, single_cell):
     new_component = slice_nmf.process(
         residuals=Buffer.from_array(single_cell.make_movie().array, size=100),
         energy=single_cell.make_movie().array.std(dim=AXIS.frame_dim),
-        detect_radius=single_cell.cell_radii[0] * 2,
+        cell_size=single_cell.cell_radii[0] * 2,
     )
     if new_component:
         new_fp, new_tr = new_component
@@ -47,7 +47,7 @@ def test_chunks(single_cell):
     fpts, trcs = nmf.process(
         residuals=Buffer.from_array(single_cell.make_movie().array, size=100),
         energy=single_cell.make_movie().array.std(dim=AXIS.frame_dim),
-        detect_radius=10,
+        cell_size=10,
     )
     if not fpts or not trcs:
         raise AssertionError("Failed to segment a new component")

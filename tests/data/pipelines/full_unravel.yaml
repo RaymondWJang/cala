@@ -14,11 +14,6 @@ input:
     type: int
 
 assets:
-  footprints:
-    type: cala.arrays.Footprints
-    params:
-      sparsify: True
-    scope: runner
   traces:
     type: cala.arrays.Traces
     scope: runner
@@ -26,20 +21,31 @@ assets:
       zarr_path: traces/
       peek_size: 100
       flush_interval: 1000
+    depends: expand_update.traces
+  footprints:
+    type: cala.arrays.Footprints
+    scope: runner
+    params:
+      sparsify: True
+    depends: expand_update.footprints
   pix_stats:
     type: cala.arrays.PixStats
     scope: runner
+    depends: expand_update.pixel_stats
   comp_stats:
     type: cala.arrays.CompStats
     scope: runner
+    depends: expand_update.component_stats
   overlaps:
     type: cala.arrays.Overlaps
     scope: runner
+    depends: expand_update.overlaps
   residuals:
     type: cala.arrays.Buffer
+    scope: runner
     params:
       size: 100
-    scope: runner
+    depends: fit_residual.movie
   buffer:
     scope: runner
     params:
@@ -81,14 +87,14 @@ nodes:
     depends:
       - pixel_stats: assets.pix_stats
       - frame: pr_noevent.value
-      - new_traces: fit_trace.latest_trace
+      - new_traces: fit_trace.new_fit
       - footprints: assets.footprints
   fit_trace_summary:
     type: cala.nodes.omf.component_stats.ingest_frame
     depends:
       - component_stats: assets.comp_stats
       - frame: pr_noevent.value
-      - new_traces: fit_trace.latest_trace
+      - new_traces: fit_trace.new_fit
   fit_footprint:
     type: cala.nodes.omf.footprints.Footprinter
     params:
@@ -114,9 +120,9 @@ nodes:
       detect_thresh: 3.0
       reprod_tol: 0.005
     depends:
-      - residuals: fit_residual.residual
-      - energy: fit_residual.energy
-      - radius: input.cell_size
+      - residuals: fit_residual.movie
+      - energy: fit_residual.std
+      - cell_size: input.cell_size
   catalog:
     type: cala.nodes.segment.Cataloger
     params:
@@ -146,7 +152,14 @@ nodes:
       - new_traces: catalog.new_traces
       - footprints: fit_footprint.footprints
       - traces: fit_trace.traces
-      - pixel_stats: fit_frame_summary.frame_sum
-      - component_stats: fit_trace_summary.trace_sum
+      - pixel_stats: fit_frame_summary.value
+      - component_stats: fit_trace_summary.value
       - overlaps: assets.overlaps
       - buffer: buffer.buffer
+
+#  return:
+#    type: return
+#    depends:
+#      - expand_update.traces
+#      - expand_update.footprints
+#      - expand_update.
