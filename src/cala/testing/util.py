@@ -1,5 +1,7 @@
+from collections.abc import Callable, Iterable
+from copy import deepcopy
 from itertools import compress
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import cv2
 import numpy as np
@@ -133,3 +135,23 @@ def total_gradient_magnitude(image: np.ndarray) -> float:
     c_I = np.linalg.norm(grad_magnitude_map, ord="fro")
 
     return c_I
+
+
+def circle_points(
+    img: np.ndarray, locs: Iterable[tuple[int, int]], grayscale: bool = True, **kwargs: Any
+) -> np.ndarray:
+    color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB) if grayscale else deepcopy(img)
+    for loc in locs:
+        color = cv2.circle(color, loc, **kwargs)
+    return color
+
+
+def check_shift_validity(
+    source: xr.DataArray, target: xr.DataArray, shift: np.ndarray, threshold: float, func: Callable
+) -> bool:
+    expected = np.array([5, 5])
+    tester = shift_by(source.values, *expected)
+    total = func(tester, target.values)
+    result = total - shift
+    error = np.linalg.norm(result - expected)
+    return error < threshold
