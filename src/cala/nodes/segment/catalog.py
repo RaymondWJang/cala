@@ -223,13 +223,16 @@ class Cataloger(Node):
         return _register(a_new, c_new)
 
     def _quality_control(
-        self, footprints: list[xr.DataArray], traces: list[xr.DataArray]
+        self, footprints: xr.DataArray, traces: xr.DataArray
     ) -> tuple[list[xr.DataArray], list[xr.DataArray]]:
         """
         Filters resulting footprints and traces based on quality thresholds
 
         """
-        mask = [np.sum(fp.data > self.val_threshold) > self.cnt_threshold for fp in footprints]
+        mask = [
+            np.sum(fp.data / fp.data.max() > self.val_threshold) > self.cnt_threshold
+            for fp in footprints
+        ]
         footprints = list(compress(footprints, mask))
         traces = list(compress(traces, mask))
 
@@ -324,13 +327,13 @@ def _gather_discrete(
     footprints = []
     traces = []
 
-    if discrete_idx.size > 0:
-        fps, trs = _register(
-            shapes=fps.isel({AXIS.component_dim: discrete_idx}),
-            tracks=trs.isel({AXIS.component_dim: discrete_idx}),
+    for idx in discrete_idx:
+        reg_fps, reg_trs = _register(
+            shapes=fps.isel({AXIS.component_dim: idx}),
+            tracks=trs.isel({AXIS.component_dim: idx}),
         )
-        footprints.append(fps)
-        traces.append(trs)
+        footprints.append(reg_fps)
+        traces.append(reg_trs)
 
     return footprints, traces
 
