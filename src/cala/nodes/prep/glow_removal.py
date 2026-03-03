@@ -2,7 +2,7 @@ from typing import Annotated as A
 
 import numpy as np
 import xarray as xr
-from noob import Name
+from noob import Name, process_method
 
 from cala.arrays import Frame
 
@@ -11,6 +11,7 @@ class GlowRemover:
     base_brightness_: np.ndarray = None
     _learn_count: int = 0
 
+    @process_method
     def process(self, frame: Frame) -> A[Frame, Name("frame")]:
         frame = frame.array
 
