@@ -1,10 +1,12 @@
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from shutil import rmtree
+from typing import Any
 from uuid import uuid4
 
 import numpy as np
 import xarray as xr
+from noob.event import MetaSignal
 from numpydantic.ndarray import NDArray
 from sparse import COO
 from xarray import Coordinates
@@ -120,3 +122,15 @@ def concatenate_coordinates(left: Coordinates, right: Coordinates) -> dict:
 
     combined = {k: np.concatenate([ll[k], rr[k]]) for k in ll}
     return combined
+
+
+def capture_subgraph_noevent(value: Any) -> Any:
+    """
+    A temporary WRONG implementation of capturing NoEvent from TubeNodes.
+    Needs to be fixed at the noob level: https://github.com/miniscope/noob/issues/162
+
+    """
+    if value is None:
+        return MetaSignal.NoEvent
+    else:
+        return value
