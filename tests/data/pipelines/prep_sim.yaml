@@ -1,0 +1,15 @@
+noob_id: cala-prep
+
+input:
+  frame:
+    type: cala.arrays.Frame
+    scope: process
+
+nodes:
+  glow:
+    type: cala.nodes.prep.GlowRemover
+    depends:
+      - frame: input.frame
+  return:
+    type: return
+    depends: glow.frame

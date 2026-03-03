@@ -1,0 +1,61 @@
+noob_id: cala-preprocess
+noob_model: noob.tube.TubeSpecification
+noob_version: 0.1.1.dev231+g30a8286
+
+input:
+  frame:
+    scope: process
+    type: cala.assets.Frame
+
+nodes:
+  hotpix:
+    type: cala.nodes.prep.blur
+    params:
+      method: median
+      kwargs:
+        ksize: 3
+    depends:
+      - frame: input.frame
+  flatten:
+    type: cala.nodes.prep.butter
+    params:
+      kwargs:
+        cutoff_frequency_ratio: 0.01
+    depends:
+      - frame: hotpix.frame
+  lines:
+    type: cala.nodes.prep.remove_mean
+    params:
+      orient: both
+    depends:
+      - frame: flatten.frame
+  motion:
+    type: cala.nodes.prep.Anchor
+    depends:
+      - frame: lines.frame
+  downsample:
+    type: tube
+    params:
+      tube: cala-downsample
+    depends:
+      - frame: motion.frame
+  ds_noevent:
+    type: cala.util.capture_subgraph_noevent
+    depends:
+      - downsample.value
+  denoise:
+    type: cala.nodes.prep.blur
+    params:
+      method: gaussian
+      kwargs:
+        ksize: [ 9, 9 ]
+        sigmaX: 0
+    depends:
+      - frame: ds_noevent.value
+  glow:
+    type: cala.nodes.prep.GlowRemover
+    depends:
+      - frame: denoise.frame
+  return:
+    type: return
+    depends: glow.frame

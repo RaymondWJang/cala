@@ -1,28 +1,28 @@
-noob_id: ingest-loop
+noob_id: cala-ingest
 noob_model: noob.tube.TubeSpecification
 noob_version: 0.1.1.dev209+g1cafe61
 input:
   frame:
     scope: process
-    type: np.ndarray
+    type: numpy.ndarray
   traces:
     scope: process
-    type: np.ndarray
+    type: numpy.ndarray
   footprints:
     scope: process
-    type: np.ndarray
+    type: numpy.ndarray
   overlaps:
     scope: process
-    type: np.ndarray
+    type: numpy.ndarray
   pix_stats:
     scope: process
-    type: np.ndarray
+    type: numpy.ndarray
   comp_stats:
     scope: process
-    type: np.ndarray
+    type: numpy.ndarray
   residuals:
     scope: process
-    type: np.ndarray
+    type: numpy.ndarray
 
 
 nodes:

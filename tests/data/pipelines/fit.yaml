@@ -1,0 +1,81 @@
+noob_id: cala-fit
+
+input:
+  frame:
+    scope: process
+    type: cala.arrays.Frame
+  footprints:
+    scope: process
+    type: cala.arrays.Footprints
+  traces:
+    scope: process
+    type: cala.arrays.Traces
+  comp_stats:
+    scope: process
+    type: cala.arrays.CompStats
+  overlaps:
+    scope: process
+    type: cala.arrays.Overlaps
+  pstat_new:
+    scope: process
+    type: cala.arrays.PixStats
+
+assets:
+  pix_stats:
+    type: cala.arrays.PixStats
+    scope: runner
+    depends: fit_pix.pixel_stats
+
+nodes:
+  fit_trace:
+    type: cala.nodes.omf.traces.Tracer
+    params:
+      tol: 0.001
+      max_iter: 100
+    depends:
+      - frame: input.frame
+      - traces: input.traces
+      - footprints: input.footprints
+      - overlaps: input.overlaps
+  extend_pix:
+    type: cala.nodes.omg.pixel_stats.ingest_component
+    depends:
+      - pixel_stats: assets.pix_stats
+      - new_component: input.pix_stats
+  fit_pix:
+    type: cala.nodes.omf.pixel_stats.ingest_frame
+    depends:
+      - frame: input.frame
+      - curr_trace: fit_trace.latest_trace
+      - footprints: input.footprints
+      - pixel_stats: extend_pix.pstat_new
+  fit_comp:
+    type: cala.nodes.omf.component_stats.ingest_frame
+    depends:
+      - frame: input.frame
+      - curr_trace: fit_trace.latest_trace
+      - component_stats: input.comp_stats
+  fit_footprints:
+    type: cala.nodes.omf.footprints.Footprinter
+    params:
+      tol: 0.0001
+      max_iter: 5
+      ratio_lb: 0.10
+    depends:
+      - footprints: input.footprints
+      - pixel_stats: fit_pix.value
+      - component_stats: fit_comp.value
+  residual:
+    type: cala.nodes.omf.residual.Residuer
+    depends:
+      - frame: input.frame
+      - traces: fit_trace.latest_trace
+      - footprints: fit_footprints.footprints
+  return:
+    type: return
+    depends:
+      - curr_trace: fit_trace.latest_trace
+      - footprints: fit_footprints.footprints
+      - component_stats: fit_comp.value
+      - curr_residual: residual.frame
+      - energy: residual.std

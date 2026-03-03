@@ -1,0 +1,113 @@
+noob_id: cala-basic
+noob_model: noob.tube.TubeSpecification
+noob_version: 0.1.1.dev231+g30a8286
+
+input:
+  cell_size:
+    scope: tube
+    type: int
+  frame:
+    scope: process
+    type: numpy.ndarray
+  index:
+    scope: process
+    type: int
+
+assets:
+  traces:
+    type: cala.arrays.Traces
+    scope: runner
+    params:
+      zarr_path: traces/
+      peek_size: 100
+      flush_interval: 1000
+    depends: fit_assets.traces
+  footprints:
+    type: cala.arrays.Footprints
+    params:
+      sparsify: true
+    scope: runner
+    depends: fit_assets.footprints
+  comp_stats:
+    type: cala.arrays.CompStats
+    scope: runner
+    depends: fit_assets.comp_stats
+  overlaps:
+    type: cala.arrays.Overlaps
+    scope: runner
+    depends: extend.overlaps
+  residuals:
+    type: cala.arrays.Buffer
+    params:
+      size: 100
+    scope: runner
+  buffer:
+    type: cala.arrays.Buffer
+    params:
+      size: 100
+    scope: runner
+    depends: fill_buffer.buffer
+
+nodes:
+  frame:
+    type: cala.nodes.prep.package_frame
+    depends:
+      - frame: input.frame
+      - index: input.index
+  preprocess:
+    type: tube
+    params:
+      tube: cala-preprocess
+    depends:
+      - frame: frame.value
+  pr_noevent:
+    type: cala.util.capture_subgraph_noevent
+    depends:
+      - preprocess.value
+
+  fit:
+    type: tube
+    params:
+      tube: cala-fit
+    depends:
+      - frame: pr_noevent.value
+      - traces: assets.traces
+      - footprints: assets.footprints
+      - comp_stats: assets.comp_stats
+      - overlaps: assets.overlaps
+      - pstat_new: assets.pstat_new
+
+  fit_assets:
+    type: cala.nodes.omf.fit_assets
+    depends:
+      - traces: fit.latest_trace
+      - footprints: fit.footprints
+      - comp_stats: fit.comp_stats
+  segment:
+    type: tube
+    params:
+      tube: cala-segment
+    depends:
+      - cell_size: input.cell_size
+      - traces: fit_assets.traces
+      - footprints: fit_assets.footprints
+      - residual_frame: fit.curr_residual
+      - energy: fit.energy
+  fill_buffer:
+    type: cala.nodes.omf.pixel_stats.fill_buffer
+    depends:
+      - buffer: assets.buffer
+      - frame: pr_noevent.value
+  extend: # passthrough if no new estimator from last iteration.
+    type: cala.nodes.segment.extend_assets
+    depends:
+      - new_traces: segment.new_traces
+      - new_footprints: segment.new_footprints
+      - traces: fit_assets.traces
+      - footprints: fit_assets.footprints
+      - trace_summary: fit_assets.comp_stats
+      - overlaps: assets.overlaps
+  
+  return:
+    type: return
+    depends: pr_noevent.value
