@@ -67,10 +67,7 @@ class SliceNMF(Node):
         return fps, trs
 
     def _get_max_energy_slice(
-        self,
-        arr: xr.DataArray,
-        energy_landscape: xr.DataArray,
-        radius: int,
+        self, arr: xr.DataArray, energy_landscape: xr.DataArray, radius: int
     ) -> xr.DataArray:
         """Find neighborhood around point of maximum variance."""
         # Find maximum point
@@ -93,9 +90,7 @@ class SliceNMF(Node):
         return neighborhood
 
     def _local_nmf(
-        self,
-        slice_: xr.DataArray,
-        spatial_sizes: Mapping[Hashable, int],
+        self, slice_: xr.DataArray, spatial_sizes: Mapping[Hashable, int]
     ) -> tuple[xr.DataArray, xr.DataArray]:
         """Perform local rank-1 Non-negative Matrix Factorization.
 
@@ -141,7 +136,7 @@ class SliceNMF(Node):
         )
 
         # normalize against the original video (as in whatever the residual used at the time)
-        factor = slice_.data.max() / c_new.data.max()
+        factor = a_new.max()
         a_new = a_new / factor
         c_new = c_new * factor
 
