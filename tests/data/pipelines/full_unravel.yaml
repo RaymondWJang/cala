@@ -66,10 +66,6 @@ nodes:
       tube: cala-preprocess
     depends:
       - frame: frame.value
-  pr_noevent:
-    type: cala.util.none_to_noevent
-    depends:
-      - preprocess.value
 
   # FIT cannot be TubeNode yet :(
   fit_trace:
@@ -80,20 +76,25 @@ nodes:
     depends:
       - traces: assets.traces
       - footprints: assets.footprints
-      - frame: pr_noevent.value
+      - frame: preprocess.value
       - overlaps: assets.overlaps
   fit_frame_summary:
     type: cala.nodes.omf.pixel_stats.ingest_frame
+    params:
+      noise_threshold: 0
+      trace_threshold: 8
     depends:
       - pixel_stats: assets.pix_stats
-      - frame: pr_noevent.value
+      - frame: preprocess.value
       - new_traces: fit_trace.new_fit
       - footprints: assets.footprints
   fit_trace_summary:
     type: cala.nodes.omf.component_stats.ingest_frame
+    params:
+      trace_threshold: 8
     depends:
       - component_stats: assets.comp_stats
-      - frame: pr_noevent.value
+      - frame: preprocess.value
       - new_traces: fit_trace.new_fit
   fit_footprint:
     type: cala.nodes.omf.footprints.Footprinter
@@ -107,7 +108,7 @@ nodes:
   fit_residual:
     type: cala.nodes.omf.residual.Residuer
     depends:
-      - frame: pr_noevent.value
+      - frame: preprocess.value
       - footprints: fit_footprint.footprints
       - traces: fit_trace.traces
       - residuals: assets.residuals
@@ -144,7 +145,7 @@ nodes:
     type: cala.nodes.omf.pixel_stats.fill_buffer
     depends:
       - buffer: assets.buffer
-      - frame: pr_noevent.value
+      - frame: preprocess.value
   expand_update:
     type: cala.nodes.segment.update_assets
     depends:
@@ -156,10 +157,3 @@ nodes:
       - component_stats: fit_trace_summary.value
       - overlaps: assets.overlaps
       - buffer: buffer.buffer
-
-#  return:
-#    type: return
-#    depends:
-#      - expand_update.traces
-#      - expand_update.footprints
-#      - expand_update.
