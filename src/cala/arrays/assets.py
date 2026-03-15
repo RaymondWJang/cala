@@ -55,7 +55,10 @@ class Asset(BaseModel):
                 contextlib.suppress(FileNotFoundError)
 
     def __eq__(self, other: "Asset") -> bool:
-        return self.array.equals(other.array)
+        if isinstance(other, Asset):
+            return self.array.equals(other.array)
+        else:
+            return False
 
     @classmethod
     def entity(cls) -> Schema:
