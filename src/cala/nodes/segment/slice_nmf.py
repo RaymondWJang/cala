@@ -49,10 +49,8 @@ class SliceNMF(Node):
                 spatial_sizes={k: v for k, v in res.sizes.items() if k in AXIS.spatial_dims},
             )
 
-            l1_norm = np.sum(slice_.values)
-            l1_error = self.error_ / l1_norm
-            l0_norm = np.prod(slice_.shape).astype(float)
-            l0_error = self.error_ / l0_norm
+            l1_error = self.error_ / np.sum(slice_.values)
+            l0_error = self.error_ / np.prod(slice_.shape).astype(float)
 
             energy.loc[{ax: slice_.coords[ax] for ax in AXIS.spatial_dims}] = 0
 
@@ -63,7 +61,7 @@ class SliceNMF(Node):
             else:
                 res.loc[{ax: slice_.coords[ax] for ax in AXIS.spatial_dims}] = l0_error
 
-        return fps, trs
+        return (fps, trs) if fps else (None, None)
 
     def _get_max_energy_slice(
         self, arr: xr.DataArray, energy_landscape: xr.DataArray, radius: int
