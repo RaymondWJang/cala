@@ -2,7 +2,16 @@ noob_id: cala-odl
 noob_model: noob.tube.TubeSpecification
 noob_version: 0.1.1.dev118+g64d81b7
 
-
+input:
+  source:
+    type: cala.arrays.Frame
+    scope: process
+  epoch:
+    type: int
+    scope: process
+  radius:
+    type: int
+    scope: tube
 
 assets:
   buffer:
@@ -41,8 +50,8 @@ nodes:
   frame:
     type: cala.nodes.prep.package_frame
     depends:
-      - frame: source.frame
-      - index: counter.idx
+      - frame: input.source
+      - index: input.epoch
 
   prep:
     type: tube
@@ -56,7 +65,7 @@ nodes:
     params:
       tube: cala-ingest
     depends:
-      - frame: glow.frame
+      - frame: prep.value
       - traces: assets.traces
       - footprints: assets.footprints
       - overlaps: assets.overlaps
@@ -68,7 +77,7 @@ nodes:
     type: cala.nodes.omf.pixel_stats.fill_buffer
     depends:
       - buffer: assets.buffer
-      - frame: glow.frame
+      - frame: prep.value
   segment:
     type: tube
     params:
@@ -76,7 +85,7 @@ nodes:
     depends:
       - residual: assets.residuals
       - energy: ingest.value
-      - radius: radius.radius
+      - radius: input.radius
       - footprints: assets.footprints
       - traces: assets.traces
       - frame_sum: assets.pix_stats
@@ -87,5 +96,4 @@ nodes:
   return:
     type: return
     depends:
-      - raw: frame.value
-      - prep: glow.frame
+      - prep: prep.value

@@ -26,28 +26,7 @@ font = {"family": "normal", "weight": "regular", "size": 15}
 matplotlib.rc("font", **font)
 
 
-VIDEOS = [
-    # "minian/msCam1.avi",
-    # "minian/msCam2.avi",
-    # "minian/msCam3.avi",
-    # "minian/msCam4.avi",
-    # "minian/msCam5.avi",
-    # "minian/msCam6.avi",
-    # "minian/msCam7.avi",
-    # "minian/msCam8.avi",
-    # "minian/msCam9.avi",
-    # "minian/msCam10.avi",
-    "long_recording/0.avi",
-    "long_recording/1.avi",
-    "long_recording/2.avi",
-    "long_recording/3.avi",
-    "long_recording/4.avi",
-    "long_recording/5.avi",
-    "long_recording/6.avi",
-    "long_recording/7.avi",
-    "long_recording/8.avi",
-    "long_recording/9.avi",
-]
+VIDEOS = [f"long_recording/{i}.avi" for i in range(20)]  # minian/msCam{i}
 
 
 def preprocess(arr, idx):
@@ -60,8 +39,8 @@ def preprocess(arr, idx):
 def test_write_raw_movie():
     gen = stream(VIDEOS)
 
-    fourcc = cv2.VideoWriter_fourcc(*"FFV1")
-    out = cv2.VideoWriter("encode_test.avi", fourcc, 60.0, (600, 600))
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter("120fps.avi", fourcc, 120.0, (600, 600))
 
     for arr in gen:
         frame_bgr = cv2.cvtColor(arr.astype(np.uint8), cv2.COLOR_GRAY2BGR)
@@ -116,6 +95,43 @@ def test_write_signal_movie():
         out.write(frame_bgr)
 
     out.release()
+
+
+def test_write_all_movies():
+    gen = stream(VIDEOS)
+
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter("4x_long2.mp4", fourcc, 30.0, (2000, 350))
+    stab = Anchor()
+    bgrm = GlowRemover()
+    max_signal = 0
+    for idx, arr in enumerate(gen):
+        if idx % 4 == 0:
+            frame = package_frame(arr[200:550, 50:-50], idx)
+            blurred = blur(frame, method="median", kwargs={"ksize": 3})
+            flat = butter(blurred, {})
+            delined = remove_mean(flat, orient="both")
+            matched = stab.stabilize(delined)
+            denoised = blur(matched, method="gaussian", kwargs={"ksize": (9, 9), "sigmaX": 0})
+            signal = bgrm.process(denoised)
+            # top = np.concat([frame.array.values, flat.array.values], axis=1)
+            # bottom = np.concat([matched.array.values, signal.array.values], axis=1)
+            # combined = np.concatenate((top, bottom), axis=0)
+            combined = np.concat(
+                [
+                    frame.array.values,
+                    flat.array.values,
+                    matched.array.values,
+                    signal.array.values * 3,
+                ],
+                axis=1,
+            )
+            max_signal = max(np.max(signal.array.values), max_signal)
+            frame_bgr = cv2.cvtColor(combined.astype(np.uint8), cv2.COLOR_GRAY2BGR)
+            out.write(frame_bgr)
+
+    out.release()
+    print(f"{max_signal = }")
 
 
 def test_motion_crisp_pics():
@@ -243,25 +259,28 @@ def test_speed_per_frame():
     Test how long it takes for the entire cala to process each frame.
     Export a plot showing time taken.
     """
-    tube = Tube.from_specification("with-minian")
-    runner = SynchronousRunner(tube=tube)
-    gen = runner.iter()
+    gen = stream(VIDEOS)
+    tube = Tube.from_specification("cala-unraveled", {"cell_size": 10})
+    runner = SynchronousRunner(tube)
     frame_speed = []
-    i = 0
-    while True:
+
+    for idx, arr in enumerate(gen):
         try:
             start = datetime.now()
-            next(gen)
+            runner.process(frame=arr, epoch=idx)
             duration = datetime.now() - start
             frame_speed.append(round(duration.total_seconds(), 2))
-            i += 1
-        except RuntimeError:
+            if idx % 100 == 0:
+                print(f"{idx} frames processed")
+            if idx == 100:
+                break
+        except RuntimeError as e:
+            print(e)
             break
     fig, ax = plt.subplots(figsize=(20, 4))
-    ax.set_yscale("log")
-    plt.plot(frame_speed)
-    plt.xlabel("frame", fontsize=20)
-    plt.ylabel("time taken (s)", fontsize=20)
+    sns.histplot(np.array(frame_speed) / 2)
+    plt.ylabel("percent", fontsize=20)
+    plt.xlabel("time taken (s)", fontsize=20)
     plt.tight_layout()
     plt.savefig("frame_speed.png")
 
@@ -340,3 +359,7 @@ def test_recursive():
     runner = SynchronousRunner(tube)
     for idx, arr in enumerate(gen):
         res = runner.process(frame=arr, index=idx)
+
+
+if __name__ == "__main__":
+    test_write_all_movies()
