@@ -5,7 +5,7 @@ from cala.main import main
 try:
     yappi.set_clock_type("WALL")
     yappi.start()
-    main(gui=True, spec="cala-odl")
+    main(gui=True, spec="cala-unraveled")
     yappi.stop()
 finally:
     stat = yappi.get_func_stats()
