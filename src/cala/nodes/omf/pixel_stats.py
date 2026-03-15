@@ -9,7 +9,12 @@ from cala.arrays import AXIS, Buffer, Footprints, Frame, Movie, PixStats, PopSna
 
 
 def ingest_frame(
-    pixel_stats: PixStats, frame: Frame, new_traces: PopSnap, footprints: Footprints
+    pixel_stats: PixStats,
+    frame: Frame,
+    new_traces: PopSnap,
+    footprints: Footprints,
+    noise_threshold: float = 1.0,
+    trace_threshold: float = 0.0,
 ) -> PixStats:
     """
     Update pixel statistics using current frame and component.
@@ -49,19 +54,21 @@ def ingest_frame(
     # W_t = ((t-1)/t)W_{t-1} + (1/t)y_t c_t^T
     # We only access the footprint area, so we can drastically reduce the calc
     y_flat = y_t.data.flatten()
+    # y_flat[y_flat < y_flat.mean() + y_flat.std() * noise_threshold] = 0
     n_components = A.sizes[AXIS.component_dim]
     A_sparse = A.data.reshape((n_components, -1)).tocsr()
     W_flat = W.data.reshape((n_components, -1)) * prev_scale
     mask_coords = A_sparse.nonzero()
 
     for i in range(n_components):
-        idx = np.where(mask_coords[0] == i)[0]
-        coords = mask_coords[1][idx]
-        data = y_flat[coords] * c_t.values[i] * new_scale
-        # target_masked = csr_matrix((data, coords), shape=y_flat.shape)
-        target_masked = np.zeros(y_flat.shape)
-        target_masked[coords] = data
-        W_flat[i] += target_masked
+        if c_t.values[i] > trace_threshold:
+            idx = np.where(mask_coords[0] == i)[0]
+            coords = mask_coords[1][idx]
+            data = y_flat[coords] * c_t.values[i] * new_scale
+            # target_masked = csr_matrix((data, coords), shape=y_flat.shape)
+            target_masked = np.zeros(y_flat.shape)
+            target_masked[coords] = data
+            W_flat[i] += target_masked
 
     CY = W_flat.reshape(W.shape)
 
