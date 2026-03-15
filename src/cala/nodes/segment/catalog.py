@@ -15,6 +15,7 @@ from skimage.measure import label
 from xarray import Coordinates
 
 from cala.arrays import AXIS, Footprint, Footprints, Trace, Traces
+from cala.nodes.segment.quality_control import morphology_filter
 from cala.util import combine_attr_replaces, concat_components, create_id, rank1nmf
 
 
@@ -223,16 +224,13 @@ class Cataloger(Node):
         return _register(a_new, c_new)
 
     def _quality_control(
-        self, footprints: xr.DataArray, traces: xr.DataArray
+        self, footprints: list[xr.DataArray], traces: list[xr.DataArray]
     ) -> tuple[list[xr.DataArray], list[xr.DataArray]]:
         """
         Filters resulting footprints and traces based on quality thresholds
-
         """
-        mask = [
-            np.sum(fp.data / fp.data.max() > self.val_threshold) > self.cnt_threshold
-            for fp in footprints
-        ]
+
+        mask = morphology_filter(footprints, self.val_threshold, self.cnt_threshold)
         footprints = list(compress(footprints, mask))
         traces = list(compress(traces, mask))
 
