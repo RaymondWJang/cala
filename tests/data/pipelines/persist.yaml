@@ -1,4 +1,6 @@
 noob_id: cala-persist
+noob_model: noob.tube.TubeSpecification
+noob_version: 0.1.2.dev297+g57d347b
 
 input:
   save_epoch:

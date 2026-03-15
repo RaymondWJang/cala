@@ -19,6 +19,7 @@ assets:
     params:
       sparsify: True
     scope: runner
+    depends: expand.footprints
   traces:
     type: cala.arrays.Traces
     scope: runner
@@ -26,20 +27,25 @@ assets:
       zarr_path: traces/
       peek_size: 100
       flush_interval: 1000
+    depends: expand.traces
   pix_stats:
     type: cala.arrays.PixStats
     scope: runner
+    depends: expand.frame_sum
   comp_stats:
     type: cala.arrays.CompStats
     scope: runner
+    depends: expand.trace_sum
   overlaps:
     type: cala.arrays.Overlaps
     scope: runner
+    depends: expand.overlaps
   residuals:
     type: cala.arrays.Buffer
     params:
       size: 100
     scope: runner
+    depends: fit.residuals
   buffer:
     scope: runner
     params:
@@ -60,39 +66,31 @@ nodes:
       tube: cala-preprocess
     depends:
       - frame: frame.value
-  pr_noevent:
-    type: cala.util.none_to_noevent
-    depends:
-      - preprocess.value
 
   fit:
     type: tube
     params:
       tube: cala-fit
     depends:
-      - frame: pr_noevent.value
+      - frame: preprocess.value
       - traces: assets.traces
       - overlaps: assets.overlaps
       - footprints: assets.footprints
       - pix_stats: assets.pix_stats
       - comp_stats: assets.comp_stats
       - residuals: assets.residuals
-
   buffer:
     type: cala.nodes.omf.pixel_stats.fill_buffer
     depends:
       - buffer: assets.buffer
-      - frame: frame.value
-  fit_noevent:
-    type: cala.util.none_to_noevent
-    depends:
-      - fit.energy
+      - frame: preprocess.value
+
   expand:
     type: tube
     params:
       tube: cala-expand
     depends:
-      - energy: fit_noevent.energy
+      - energy: fit.energy
       - residual: fit.residual
       - traces: fit.traces
       - footprints: fit.footprints
