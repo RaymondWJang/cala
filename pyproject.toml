@@ -34,8 +34,9 @@ dependencies = [
     "pyyaml>=6.0.2",
     "typer>=0.15.3",
     "xarray-validate>=0.0.2",
-    "noob @ git+https://github.com/miniscope/noob.git#subdirectory=packages/noob",
+    "noob>=1000.0.0",
     "natsort>=8.4.0",
+    "pympler>=1.1",
 ]
 keywords = [
     "pipeline",

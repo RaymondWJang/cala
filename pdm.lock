@@ -5,7 +5,7 @@
 groups = ["default", "dev", "docs", "gui", "tests"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:ff69e904d71774abd851abd83de30b9ae1bacfaa6127b0f08b3a25db942028c6"
+content_hash = "sha256:93508622fcfdaee0b87d958540f4da4a44eceffb26e0b3185f0faeecd11dfc76"
 
 [[metadata.targets]]
 requires_python = ">=3.11"
@@ -1821,11 +1821,8 @@ files = [
 
 [[package]]
 name = "noob"
-version = "0.1.2.dev297"
+version = "1000.0.0"
 requires_python = ">=3.11"
-subdirectory = "packages/noob"
-git = "https://github.com/miniscope/noob.git"
-revision = "57d347b0ebfe5a7c04dae4173947f1d9a317d5f0"
 summary = "A graph processing library for processing graphs"
 dependencies = [
     "platformdirs>=4.3.7",
@@ -1834,6 +1831,10 @@ dependencies = [
     "rich>=13.9.4",
     "ruamel-yaml>=0.18.16",
     "typing-extensions>=4.15.0; python_version < \"3.13\"",
+]
+files = [
+    { file = "noob-1000.0.0-py3-none-any.whl", hash = "sha256:666befd9856f5f9dca45c606c7f5b8b1cd007d9e4b836f871b33fc0ea689f4f2" },
+    { file = "noob-1000.0.0.tar.gz", hash = "sha256:94cb08c0368b6928da5795dfb72372b1d464ed88f8ca13f1c8ee00ad1d2d4109" },
 ]
 
 [[package]]
@@ -2414,6 +2415,19 @@ summary = "Pygments is a syntax highlighting package written in Python."
 files = [
     { file = "pygments-2.19.1-py3-none-any.whl", hash = "sha256:9ea1544ad55cecf4b8242fab6dd35a93bbce657034b0611ee383099054ab6d8c" },
     { file = "pygments-2.19.1.tar.gz", hash = "sha256:61c16d2a8576dc0649d9f39e089b5f02bcd27fba10d8fb4dcc28173f7a45151f" },
+]
+
+[[package]]
+name = "pympler"
+version = "1.1"
+requires_python = ">=3.6"
+summary = "A development tool to measure, monitor and analyze the memory behavior of Python objects."
+dependencies = [
+    "pywin32>=226; platform_system == \"Windows\"",
+]
+files = [
+    { file = "Pympler-1.1-py3-none-any.whl", hash = "sha256:5b223d6027d0619584116a0cbc28e8d2e378f7a79c1e5e024f9ff3b673c58506" },
+    { file = "pympler-1.1.tar.gz", hash = "sha256:1eaa867cb8992c218430f1708fdaccda53df064144d1c5656b1e6f1ee6000424" },
 ]
 
 [[package]]
