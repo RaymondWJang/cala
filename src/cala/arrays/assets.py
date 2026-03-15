@@ -269,7 +269,7 @@ class Traces(Asset):
             to_flush.to_zarr(self.zarr_path, append_dim=AXIS.frame_dim)
         self.array_ = self.array_.isel({AXIS.frame_dim: slice(-self.peek_size, None)})
 
-    def keep(self, intact_mask: np.ndarray) -> None:
+    def deprecate_except(self, intact_mask: np.ndarray) -> None:
         if self.zarr_path:
             self._deprecated.extend(self.array_[AXIS.id_coord].values[~intact_mask])
         self.array_ = self.array_[intact_mask]
