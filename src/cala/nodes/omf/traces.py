@@ -7,7 +7,8 @@ from noob import Name, process_method
 from pydantic import BaseModel
 from scipy.sparse.csgraph import connected_components
 
-from cala.arrays import AXIS, Footprints, Frame, Overlaps, PopSnap, Traces
+from cala.arrays import AXIS, Frame, PopSnap
+from cala.arrays.models import Footprints, Overlaps, Traces
 from cala.logging import init_logger
 from cala.util import norm, stack_sparse
 
@@ -157,8 +158,8 @@ def ingest_component(traces: Traces, new_traces: Traces) -> Traces:
 
     merged_ids = c_new.attrs.get("replaces")
     if merged_ids:
-        intact_mask = ~np.isin(traces.array[AXIS.id_coord].values, merged_ids)
-        traces.keep(intact_mask)
+        mask = np.isin(traces.array[AXIS.id_coord].values, merged_ids)
+        traces.deprecate(mask)
 
     c_pad = _pad_history(c_new, total_frames, np.nan) if total_frames > new_n_frames else c_new
 

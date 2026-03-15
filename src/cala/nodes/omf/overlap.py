@@ -1,9 +1,8 @@
 import numpy as np
-import xarray as xr
-from sparse import COO
 
-from cala.arrays import AXIS, Footprints, Overlaps
-from cala.util import concatenate_coordinates, sp_matmul, stack_sparse
+from cala.arrays import AXIS
+from cala.arrays.models import Footprints, Overlaps, assemble_sparse_bool, overlap_format
+from cala.util import sp_matmul, stack_sparse
 
 
 def initialize(overlaps: Overlaps, footprints: Footprints) -> Overlaps:
@@ -69,58 +68,6 @@ def ingest_component(
         V.nonzero(), v_topright, v_bottleft, v_botright.nonzero(), V.shape, v_botright.shape
     )
 
-    overlaps.array = overlap_format(updated_overlaps, V_side, a_new)
+    overlaps.array = overlap_format(updated_overlaps, V_side, a_new.coords)
 
     return overlaps
-
-
-def overlap_format(array: COO, V_comp: xr.DataArray, a_new_comp: xr.DataArray) -> xr.DataArray:
-    prim_coords = concatenate_coordinates(V_comp.coords, a_new_comp.coords)
-    seco_coords = concatenate_coordinates(
-        V_comp.rename(AXIS.component_rename).coords, a_new_comp.rename(AXIS.component_rename).coords
-    )
-    return xr.DataArray(
-        array,
-        dims=(AXIS.component_dim, AXIS.duplicate(AXIS.component_dim)),
-        coords={k: (AXIS.component_dim, v) for k, v in prim_coords.items()},
-    ).assign_coords({k: (AXIS.duplicate(AXIS.component_dim), v) for k, v in seco_coords.items()})
-
-
-def assemble_sparse_bool(
-    top_left: tuple[np.ndarray, np.ndarray],
-    top_right: tuple[np.ndarray, np.ndarray],
-    bottom_left: tuple[np.ndarray, np.ndarray],
-    bottom_right: tuple[np.ndarray, np.ndarray],
-    init_shape: tuple[int, int],
-    attach_shape: tuple[int, int],
-) -> COO:
-    """
-    Assemble a sparse boolean array with four coordinates in the format of
-    scipy.sparse.sp_matrix.nonzero()
-
-    """
-    x_coords = top_left[0]
-    y_coords = top_left[1]
-    x_coords = np.concatenate([x_coords, top_right[0]])
-    y_coords = np.concatenate([y_coords, top_right[1] + init_shape[1]])
-    x_coords = np.concatenate([x_coords, bottom_left[0] + init_shape[0]])
-    y_coords = np.concatenate([y_coords, bottom_left[1]])
-    x_coords = np.concatenate([x_coords, bottom_right[0] + init_shape[0]])
-    y_coords = np.concatenate([y_coords, bottom_right[1] + init_shape[1]])
-
-    final_shape = tuple(x1 + x2 for x1, x2 in zip(init_shape, attach_shape))
-    return COO(coords=(x_coords, y_coords), shape=final_shape, data=1)
-
-
-def assemble_square(
-    top_left: np.ndarray, top_right: np.ndarray, bottom_left: np.ndarray, bottom_right: np.ndarray
-) -> np.ndarray:
-    """
-    Assemble four 2D arrays into a single 2D array, with one in each corner.
-
-    """
-    top_block = np.hstack([top_left, top_right])
-    bottom_block = np.hstack([bottom_left, bottom_right])
-
-    # Finally combine top and bottom blocks
-    return np.vstack([top_block, bottom_block])

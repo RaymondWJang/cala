@@ -2,7 +2,8 @@ from typing import Annotated as A
 
 from noob import Name
 
-from cala.arrays import CompStats, Footprints, Movie, Overlaps, PixStats, Traces
+from cala.arrays import Movie
+from cala.arrays.models import CompStats, Footprints, Overlaps, PixStats, Traces
 from cala.nodes.omf.component_stats import ingest_component as update_component_stats
 from cala.nodes.omf.footprints import ingest_component as update_footprints
 from cala.nodes.omf.overlap import ingest_component as update_overlap

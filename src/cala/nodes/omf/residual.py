@@ -6,7 +6,8 @@ from noob import Name, process_method
 from pydantic import BaseModel, PrivateAttr
 from scipy.sparse import csr_matrix
 
-from cala.arrays import AXIS, Buffer, Footprints, Frame, Traces
+from cala.arrays import AXIS, Buffer, Frame
+from cala.arrays.models import Footprints, Traces
 
 
 class Residuer(BaseModel):

@@ -1,18 +1,17 @@
-from typing import Annotated as A
+from typing import Annotated as A, Sequence
 
-import numpy as np
 from noob import Name
 
-from cala.arrays import AXIS, Buffer, CompStats, Footprints, Overlaps, PixStats, Traces
+from cala.arrays import CompStats, Footprints, Overlaps, PixStats, Traces
 
 
-def deprecate_components(
+def deprecate_except(
     footprints: Footprints,
     traces: Traces,
     pix_stats: PixStats,
     comp_stats: CompStats,
     overlaps: Overlaps,
-    remove_ids: list[str],
+    keep_mask: Sequence[bool],
 ) -> tuple[
     A[Footprints, Name("footprints")],
     A[Traces, Name("traces")],
@@ -21,12 +20,9 @@ def deprecate_components(
     A[Overlaps, Name("overlaps")],
 ]:
     """
-    Deprecate a list of components from all arrays involved in omf.
-
+    Deprecate a set of components from all assets.
     """
-    keep_mask = ~np.isin(traces.array[AXIS.id_coord].values, remove_ids)
-
-    traces.keep(keep_mask)
+    traces.deprecate_except(keep_mask)
     # the line below compiles numba. gotta do it like in footprints.ingest_component
     # but then i need to redundantly convert COO -> csr -> COO -> csr -> COO
     footprints.array = footprints.array[keep_mask]
@@ -48,24 +44,3 @@ def find_inactive() -> list[str]:
         some % of the minimum of the total brightness contributions from all components?
         - but what if the component is completely occluded sometimes?
     """
-
-
-def clear_overestimates(
-    footprints: Footprints, residuals: Buffer, nmf_error: float
-) -> A[Footprints, Name("footprints")]:
-    """
-    Remove all sections of the footprints that cause negative residuals.
-
-    This occurs by:
-    1. find "significant" negative residual spots that is more than a noise level, and thus
-    cannot be clipped to zero. !!!! (only of the latest frame, and then go back to trace update..?)
-    2. all footprint values at these spots go to zero.
-    """
-    if residuals.array is None:
-        return footprints
-    R_min = residuals.array.isel({AXIS.frame_dim: -1}).reset_coords(
-        [AXIS.frame_coord, AXIS.timestamp_coord], drop=True
-    )
-    tuned_fp = footprints.array.where(R_min > -nmf_error, 0, drop=False)
-
-    return tuned_fp

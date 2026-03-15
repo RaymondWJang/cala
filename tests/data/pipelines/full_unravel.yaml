@@ -15,7 +15,7 @@ input:
 
 assets:
   traces:
-    type: cala.arrays.Traces
+    type: cala.arrays.models.Traces
     scope: runner
     params:
       zarr_path: traces/
@@ -23,21 +23,21 @@ assets:
       flush_interval: 1000
     depends: expand_update.traces
   footprints:
-    type: cala.arrays.Footprints
+    type: cala.arrays.models.Footprints
     scope: runner
     params:
       sparsify: True
     depends: expand_update.footprints
   pix_stats:
-    type: cala.arrays.PixStats
+    type: cala.arrays.models.PixStats
     scope: runner
     depends: expand_update.pixel_stats
   comp_stats:
-    type: cala.arrays.CompStats
+    type: cala.arrays.models.CompStats
     scope: runner
     depends: expand_update.component_stats
   overlaps:
-    type: cala.arrays.Overlaps
+    type: cala.arrays.models.Overlaps
     scope: runner
     depends: expand_update.overlaps
   residuals:

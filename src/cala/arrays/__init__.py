@@ -1,25 +1,8 @@
 from .axis import AXIS  # noqa: I001
-from .assets import (
-    Buffer,
-    CompStats,
-    Footprint,
-    Footprints,
-    Frame,
-    Movie,
-    Overlaps,
-    PixStats,
-    PopSnap,
-    Trace,
-    Traces,
-)
+from .containers import Buffer, Footprint, Frame, Movie, PopSnap, Trace
 
 __all__ = [
     "AXIS",
-    "Traces",
-    "Footprints",
-    "PixStats",
-    "CompStats",
-    "Overlaps",
     "Buffer",
     "Trace",
     "Footprint",

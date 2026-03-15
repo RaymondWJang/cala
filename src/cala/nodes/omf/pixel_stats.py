@@ -5,7 +5,8 @@ import xarray as xr
 from noob import Name
 from scipy.sparse import csr_matrix
 
-from cala.arrays import AXIS, Buffer, Footprints, Frame, Movie, PixStats, PopSnap, Traces
+from cala.arrays import AXIS, Buffer, Frame, Movie, PopSnap
+from cala.arrays.models import Footprints, PixStats, Traces
 
 
 def ingest_frame(

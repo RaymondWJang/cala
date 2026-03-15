@@ -7,7 +7,8 @@ import xarray as xr
 from pydantic import BaseModel, ConfigDict, PrivateAttr, field_validator, model_validator
 from skimage.morphology import disk
 
-from cala.arrays import AXIS, Footprints, Frame, Movie, Traces
+from cala.arrays import AXIS, Frame, Movie
+from cala.arrays.models import Footprints, Traces
 
 
 class FrameDims(BaseModel):
