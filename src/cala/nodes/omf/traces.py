@@ -159,7 +159,7 @@ def ingest_component(traces: Traces, new_traces: Traces) -> Traces:
     merged_ids = c_new.attrs.get("replaces")
     if merged_ids:
         mask = np.isin(traces.array[AXIS.id_coord].values, merged_ids)
-        traces.deprecate(mask)
+        traces.deprecate(mask, inplace=True)
 
     c_pad = _pad_history(c_new, total_frames, np.nan) if total_frames > new_n_frames else c_new
 

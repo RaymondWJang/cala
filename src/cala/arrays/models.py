@@ -444,7 +444,8 @@ class CompStats(ArrayContainer, ModelMixin):
     def deprecate(
         self, mask: np.ndarray[Any, np.dtype[np.bool]], inplace: bool = False
     ) -> None | xr.DataArray:
-        reduced = self.array[mask].T[mask]
+        keep_mask = ~mask
+        reduced = self.array[keep_mask].T[keep_mask]
         if inplace:
             self.array = reduced
             return None
@@ -525,14 +526,15 @@ class Overlaps(ArrayContainer, ModelMixin):
     def deprecate(
         self, mask: np.ndarray[Any, np.dtype[np.bool]], inplace: bool = False
     ) -> None | xr.DataArray:
-        reduced = self.array.data.tocsr()[mask].T[mask]
+        keep_mask = ~mask
+        reduced = self.array.data.tocsr()[keep_mask].T[keep_mask]
         reduced = xr.DataArray(
             COO.from_scipy_sparse(reduced),
             dims=self.array.dims,
-            coords=self.array[AXIS.component_dim][mask].coords,
+            coords=self.array[AXIS.component_dim][keep_mask].coords,
         )
         reduced = reduced.assign_coords(
-            self.array[AXIS.component_dim][mask].rename(AXIS.component_rename).coords
+            self.array[AXIS.component_dim][keep_mask].rename(AXIS.component_rename).coords
         )
         if inplace:
             self.array = reduced

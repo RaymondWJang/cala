@@ -1,17 +1,21 @@
-from typing import Annotated as A, Sequence
+from typing import Annotated as A
+from typing import Any
 
+import numpy as np
 from noob import Name
 
-from cala.arrays import CompStats, Footprints, Overlaps, PixStats, Traces
+from cala.arrays import AXIS
+from cala.arrays.models import CompStats, Footprints, Overlaps, PixStats, Traces
+from cala.nodes.segment.quality_control import morphology_filter
 
 
-def deprecate_except(
+def deprecate(
     footprints: Footprints,
     traces: Traces,
     pix_stats: PixStats,
     comp_stats: CompStats,
     overlaps: Overlaps,
-    keep_mask: Sequence[bool],
+    mask: np.ndarray[Any, np.dtype[np.bool]] | None = None,
 ) -> tuple[
     A[Footprints, Name("footprints")],
     A[Traces, Name("traces")],
@@ -20,15 +24,26 @@ def deprecate_except(
     A[Overlaps, Name("overlaps")],
 ]:
     """
-    Deprecate a set of components from all assets.
+    Deprecate a set of components from all models.
     """
-    traces.deprecate_except(keep_mask)
-    # the line below compiles numba. gotta do it like in footprints.ingest_component
-    # but then i need to redundantly convert COO -> csr -> COO -> csr -> COO
-    footprints.array = footprints.array[keep_mask]
-    pix_stats.array = pix_stats.array[keep_mask]
-    comp_stats.array = comp_stats.array[keep_mask].T[keep_mask]
-    overlaps.array = overlaps.array[keep_mask].T[keep_mask]
+    # ! Refactor the below two lines to a separate node
+    if footprints.array is None:
+        return footprints, traces, pix_stats, comp_stats, overlaps
+    fps = [
+        fp
+        for fp in footprints.array.data.reshape(
+            (footprints.array.sizes[AXIS.component_dim], -1)
+        ).tocsc()
+    ]
+    passed = morphology_filter(footprints=fps, value_threshold=0.8, count_threshold=24)
+    failed = ~np.array(passed)
+
+    if any(failed):
+        traces.deprecate(failed, inplace=True)
+        footprints.deprecate(failed, inplace=True)
+        pix_stats.deprecate(failed, inplace=True)
+        comp_stats.deprecate(failed, inplace=True)
+        overlaps.deprecate(failed, inplace=True)
 
     return footprints, traces, pix_stats, comp_stats, overlaps
 
@@ -44,3 +59,4 @@ def find_inactive() -> list[str]:
         some % of the minimum of the total brightness contributions from all components?
         - but what if the component is completely occluded sometimes?
     """
+    raise NotImplementedError
