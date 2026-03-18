@@ -35,7 +35,7 @@ def deprecate(
             (footprints.array.sizes[AXIS.component_dim], -1)
         ).tocsc()
     ]
-    passed = morphology_filter(footprints=fps, value_threshold=0.8, count_threshold=24)
+    passed = morphology_filter(footprints=fps, value_threshold=0.8, count_threshold=20)
     failed = ~np.array(passed)
 
     if any(failed):

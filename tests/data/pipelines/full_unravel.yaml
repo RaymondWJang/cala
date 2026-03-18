@@ -67,6 +67,12 @@ nodes:
     depends:
       - frame: frame.value
 
+  buffer:
+    type: cala.nodes.omf.pixel_stats.fill_buffer
+    depends:
+      - buffer: assets.buffer
+      - frame: preprocess.value
+
   # FIT cannot be TubeNode yet :(
   fit_trace:
     type: cala.nodes.omf.traces.Tracer
@@ -113,6 +119,17 @@ nodes:
       - traces: fit_trace.traces
       - residuals: assets.residuals
 
+
+  prune:
+    type: cala.nodes.segment.prune.deprecate
+    depends:
+      - traces: fit_trace.traces
+      - footprints: fit_footprint.footprints
+      - pix_stats: fit_frame_summary.value
+      - comp_stats: fit_trace_summary.value
+      - overlaps: assets.overlaps
+
+
   # EXPAND cannot be TubeNode yet :(
   nmf:
     type: cala.nodes.segment.SliceNMF
@@ -139,21 +156,16 @@ nodes:
     depends:
       - new_fps: nmf.new_fps
       - new_trs: nmf.new_trs
-      - existing_fp: fit_footprint.footprints
-      - existing_tr: fit_trace.traces
-  buffer:
-    type: cala.nodes.omf.pixel_stats.fill_buffer
-    depends:
-      - buffer: assets.buffer
-      - frame: preprocess.value
+      - existing_fp: prune.footprints
+      - existing_tr: prune.traces
   expand_update:
     type: cala.nodes.segment.update_assets
     depends:
       - new_footprints: catalog.new_footprints
       - new_traces: catalog.new_traces
-      - footprints: fit_footprint.footprints
-      - traces: fit_trace.traces
-      - pixel_stats: fit_frame_summary.value
-      - component_stats: fit_trace_summary.value
-      - overlaps: assets.overlaps
+      - footprints: prune.footprints
+      - traces: prune.traces
+      - pixel_stats: prune.pix_stats
+      - component_stats: prune.comp_stats
+      - overlaps: prune.overlaps
       - buffer: buffer.buffer
