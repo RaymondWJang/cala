@@ -1,4 +1,4 @@
-noob_id: long-recording
+noob_id: test-with-minian
 noob_model: noob.tube.TubeSpecification
 noob_version: 0.1.1.dev118+g64d81b7
 
@@ -40,8 +40,17 @@ nodes:
   source:
     type: cala.nodes.io.stream
     params:
-      subdir: long_recording
-      extension: .avi
+      files:
+        - minian/msCam1.avi
+        - minian/msCam2.avi
+        - minian/msCam3.avi
+        - minian/msCam4.avi
+        - minian/msCam5.avi
+        - minian/msCam6.avi
+        - minian/msCam7.avi
+        - minian/msCam8.avi
+        - minian/msCam9.avi
+        - minian/msCam10.avi
   counter:
     type: cala.nodes.prep.counter
   frame:
@@ -76,35 +85,29 @@ nodes:
     type: cala.nodes.prep.Anchor
     depends:
       - frame: lines.frame
+  denoise:
+    type: cala.nodes.prep.blur
+    params:
+      method: median
+      kwargs:
+        ksize: 7
+    depends:
+      - frame: motion.frame
   glow:
     type: cala.nodes.prep.GlowRemover
     depends:
-      - frame: motion.frame
-  gather:
-    type: gather
-    params:
-      n: 4
-    depends:
-      - glow.frame
-  downsample: # 20fps -> 5fps
-    type: cala.nodes.prep.downsample
-    params:
-      x_range: [ 250, 350 ]
-      y_range: [ 250, 350 ]
-      t_downsample: 4
-    depends:
-      - frames: gather.value
+      - frame: denoise.frame
   size_est:
     type: cala.nodes.prep.SizeEst
     params:
-      hardset_radius: 8
+      hardset_radius: 6
     depends:
-      - frame: downsample.frame
+      - frame: denoise.frame
   cache:
     type: cala.nodes.omf.pixel_stats.fill_buffer
     depends:
       - buffer: assets.buffer
-      - frame: downsample.frame
+      - frame: glow.frame
   #PREPROCESS ENDS
 
   # FRAME UPDATE BEGINS
@@ -116,25 +119,24 @@ nodes:
     depends:
       - traces: assets.traces
       - footprints: assets.footprints
-      - frame: downsample.frame
+      - frame: glow.frame
       - overlaps: assets.overlaps
   pix_frame:
     type: cala.nodes.omf.pixel_stats.ingest_frame
     depends:
       - pixel_stats: assets.pix_stats
-      - frame: downsample.frame
+      - frame: glow.frame
       - new_traces: trace_frame.latest_trace
       - footprints: assets.footprints
   comp_frame:
     type: cala.nodes.omf.component_stats.ingest_frame
     depends:
       - component_stats: assets.comp_stats
-      - frame: downsample.frame
+      - frame: glow.frame
       - new_traces: trace_frame.latest_trace
   footprints_frame:
     type: cala.nodes.omf.footprints.Footprinter
     params:
-      bep: 0
       tol: 0.0001
       max_iter: 5
       ratio_lb: 0.10
@@ -146,7 +148,7 @@ nodes:
   residual:
     type: cala.nodes.omf.residual.Residuer
     depends:
-      - frame: downsample.frame
+      - frame: glow.frame
       - footprints: footprints_frame.footprints
       - traces: assets.traces
       - residuals: assets.residuals
@@ -157,7 +159,7 @@ nodes:
     type: cala.nodes.segment.SliceNMF
     params:
       min_frames: 100
-      detect_thresh: 8.0
+      detect_thresh: 3.0
       reprod_tol: 0.005
     depends:
       - residuals: residual.movie
@@ -172,7 +174,7 @@ nodes:
         sigmaX: 0
       trace_smooth_kwargs:
         sigma: 2
-      merge_threshold: 0.9
+      merge_threshold: 0.95
       val_threshold: 0.5
       cnt_threshold: 5
     depends:
@@ -192,21 +194,3 @@ nodes:
       - overlaps: assets.overlaps
       - buffer: assets.buffer
   #  DETECT ENDS
-
-  save_trace:
-    type: cala.nodes.io.save_asset
-    params:
-      target_epoch: 855999 #  formula: 1000 * n_chunks - 1
-      path: traces_fin/
-    depends:
-      - asset: assets.traces
-      - curr_epoch: counter.idx
-
-  save_shape:
-    type: cala.nodes.io.save_asset
-    params:
-      target_epoch: 855999 #  formula: 1000 * n_chunks - 1
-      path: footprints_fin/
-    depends:
-      - asset: assets.footprints
-      - curr_epoch: counter.idx

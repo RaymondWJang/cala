@@ -1,0 +1,171 @@
+noob_id: cala-unraveled
+noob_model: noob.tube.TubeSpecification
+noob_version: 0.1.1.dev118+g64d81b7
+
+input:
+  cell_size:
+    scope: tube
+    type: int
+  frame:
+    scope: process
+    type: numpy.ndarray
+  epoch:
+    scope: process
+    type: int
+
+assets:
+  traces:
+    type: cala.arrays.models.Traces
+    scope: runner
+    params:
+      zarr_path: traces/
+      peek_size: 100
+      flush_interval: 1000
+    depends: expand_update.traces
+  footprints:
+    type: cala.arrays.models.Footprints
+    scope: runner
+    params:
+      sparsify: True
+    depends: expand_update.footprints
+  pix_stats:
+    type: cala.arrays.models.PixStats
+    scope: runner
+    depends: expand_update.pixel_stats
+  comp_stats:
+    type: cala.arrays.models.CompStats
+    scope: runner
+    depends: expand_update.component_stats
+  overlaps:
+    type: cala.arrays.models.Overlaps
+    scope: runner
+    depends: expand_update.overlaps
+  residuals:
+    type: cala.arrays.Buffer
+    scope: runner
+    params:
+      size: 100
+    depends: fit_residual.movie
+  buffer:
+    scope: runner
+    params:
+      size: 100
+    type: cala.arrays.Buffer
+    depends: buffer.buffer
+
+nodes:
+  frame:
+    type: cala.nodes.prep.package_frame
+    depends:
+      - frame: input.frame
+      - index: input.epoch
+
+  preprocess:
+    type: tube
+    params:
+      tube: cala-preprocess
+    depends:
+      - frame: frame.value
+
+  buffer:
+    type: cala.nodes.omf.pixel_stats.fill_buffer
+    depends:
+      - buffer: assets.buffer
+      - frame: preprocess.value
+
+  # FIT cannot be TubeNode yet :(
+  fit_trace:
+    type: cala.nodes.omf.traces.Tracer
+    params:
+      tol: 0.001
+      max_iter: 100
+    depends:
+      - traces: assets.traces
+      - footprints: assets.footprints
+      - frame: preprocess.value
+      - overlaps: assets.overlaps
+  fit_frame_summary:
+    type: cala.nodes.omf.pixel_stats.ingest_frame
+    params:
+      noise_threshold: 0
+      trace_threshold: 8
+    depends:
+      - pixel_stats: assets.pix_stats
+      - frame: preprocess.value
+      - new_traces: fit_trace.new_fit
+      - footprints: assets.footprints
+  fit_trace_summary:
+    type: cala.nodes.omf.component_stats.ingest_frame
+    params:
+      trace_threshold: 8
+    depends:
+      - component_stats: assets.comp_stats
+      - frame: preprocess.value
+      - new_traces: fit_trace.new_fit
+  fit_footprint:
+    type: cala.nodes.omf.footprints.Footprinter
+    params:
+      max_iter: 5
+      ratio_lb: 0.10
+    depends:
+      - footprints: assets.footprints
+      - pixel_stats: fit_frame_summary.value
+      - component_stats: fit_trace_summary.value
+  fit_residual:
+    type: cala.nodes.omf.residual.Residuer
+    depends:
+      - frame: preprocess.value
+      - footprints: fit_footprint.footprints
+      - traces: fit_trace.traces
+      - residuals: assets.residuals
+
+
+  prune:
+    type: cala.nodes.segment.prune.deprecate
+    depends:
+      - traces: fit_trace.traces
+      - footprints: fit_footprint.footprints
+      - pix_stats: fit_frame_summary.value
+      - comp_stats: fit_trace_summary.value
+      - overlaps: assets.overlaps
+
+
+  # EXPAND cannot be TubeNode yet :(
+  nmf:
+    type: cala.nodes.segment.SliceNMF
+    params:
+      min_frames: 100
+      detect_thresh: 3.0
+      reprod_tol: 0.005
+    depends:
+      - residuals: fit_residual.movie
+      - energy: fit_residual.std
+      - cell_size: input.cell_size
+  catalog:
+    type: cala.nodes.segment.Cataloger
+    params:
+      age_limit: 500
+      shape_smooth_kwargs:
+        ksize: [ 1, 1 ]
+        sigmaX: 0
+      trace_smooth_kwargs:
+        sigma: 2
+      merge_threshold: 0.95
+      val_threshold: 0.8
+      cnt_threshold: 25
+    depends:
+      - new_fps: nmf.new_fps
+      - new_trs: nmf.new_trs
+      - existing_fp: prune.footprints
+      - existing_tr: prune.traces
+  expand_update:
+    type: cala.nodes.segment.update_assets
+    depends:
+      - new_footprints: catalog.new_footprints
+      - new_traces: catalog.new_traces
+      - footprints: prune.footprints
+      - traces: prune.traces
+      - pixel_stats: prune.pix_stats
+      - component_stats: prune.comp_stats
+      - overlaps: prune.overlaps
+      - buffer: buffer.buffer

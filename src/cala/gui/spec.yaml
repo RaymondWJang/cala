@@ -28,5 +28,4 @@ nodes:
   component_count:
     type: cala.gui.components.component_counter
     depends:
-      - index: counter.idx
-      - traces: arrays.traces
+      - traces: fit_trace.new_fit

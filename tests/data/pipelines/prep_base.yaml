@@ -1,30 +1,13 @@
-noob_id: cala-prep
+noob_id: cala-preprocess
 noob_model: noob.tube.TubeSpecification
-noob_version: 0.1.1.dev118+g64d81b7
+noob_version: 0.1.1.dev231+g30a8286
+
+input:
+  frame:
+    scope: process
+    type: cala.assets.Frame
 
 nodes:
-  source:
-    type: cala.nodes.io.stream
-    params:
-      files:
-        - cala/msCam1.avi
-        - cala/msCam2.avi
-        - cala/msCam3.avi
-        - cala/msCam4.avi
-        - cala/msCam5.avi
-        - cala/msCam6.avi
-        - cala/msCam7.avi
-        - cala/msCam8.avi
-        - cala/msCam9.avi
-        - cala/msCam10.avi
-  counter:
-    type: cala.nodes.prep.counter
-  frame:
-    type: cala.nodes.prep.package_frame
-    depends:
-      - frame: source.value
-      - index: counter.idx
-
   hotpix:
     type: cala.nodes.prep.blur
     params:
@@ -32,12 +15,12 @@ nodes:
       kwargs:
         ksize: 3
     depends:
-      - frame: frame.value
+      - frame: input.frame
   flatten:
     type: cala.nodes.prep.butter
     params:
       kwargs:
-        cutoff_frequency_ratio: 0.010
+        cutoff_frequency_ratio: 0.01
     depends:
       - frame: hotpix.frame
   lines:
@@ -50,12 +33,23 @@ nodes:
     type: cala.nodes.prep.Anchor
     depends:
       - frame: lines.frame
+  #  downsample:
+  #    type: tube
+  #    params:
+  #      tube: cala-downsample
+  #    depends:
+  #      - frame: motion.frame
+  #  ds_noevent:
+  #    type: cala.util.none_to_noevent
+  #    depends:
+  #      - downsample.value
   denoise:
     type: cala.nodes.prep.blur
     params:
-      method: median
+      method: gaussian
       kwargs:
-        ksize: 7
+        ksize: [ 9, 9 ]
+        sigmaX: 0
     depends:
       - frame: motion.frame
   glow:

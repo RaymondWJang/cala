@@ -7,7 +7,8 @@ from noob import Name, process_method
 from pydantic import BaseModel
 from scipy.sparse.csgraph import connected_components
 
-from cala.arrays import AXIS, Footprints, Frame, Overlaps, PopSnap, Traces
+from cala.arrays import AXIS, Frame, PopSnap
+from cala.arrays.models import Footprints, Overlaps, Traces
 from cala.logging import init_logger
 from cala.util import norm, stack_sparse
 
@@ -21,7 +22,7 @@ class Tracer(BaseModel):
     @process_method
     def ingest_frame(
         self, traces: Traces, footprints: Footprints, frame: Frame, overlaps: Overlaps
-    ) -> A[PopSnap, Name("latest_trace")]:
+    ) -> tuple[A[Traces, Name("traces")], A[PopSnap, Name("new_fit")]]:
         """
         Update temporal traces using current spatial footprints and frame data.
 
@@ -51,7 +52,7 @@ class Tracer(BaseModel):
                 components i and j overlap, and 0 otherwise.
         """
         if footprints.array is None:
-            return PopSnap()
+            return traces, PopSnap()
 
         # Prepare inputs for the update algorithm
         A = stack_sparse(footprints.array, AXIS.component_dim).tocsr().T
@@ -82,7 +83,7 @@ class Tracer(BaseModel):
         else:
             traces.append(updated_traces, dim=AXIS.frame_dim)
 
-        return PopSnap.from_array(updated_traces)
+        return traces, PopSnap.from_array(updated_traces)
 
 
 def _update_traces(
@@ -157,8 +158,8 @@ def ingest_component(traces: Traces, new_traces: Traces) -> Traces:
 
     merged_ids = c_new.attrs.get("replaces")
     if merged_ids:
-        intact_mask = ~np.isin(traces.array[AXIS.id_coord].values, merged_ids)
-        traces.keep(intact_mask)
+        mask = np.isin(traces.array[AXIS.id_coord].values, merged_ids)
+        traces.deprecate(mask, inplace=True)
 
     c_pad = _pad_history(c_new, total_frames, np.nan) if total_frames > new_n_frames else c_new
 

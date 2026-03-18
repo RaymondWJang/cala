@@ -1,0 +1,23 @@
+noob_id: cala-downsample
+noob_model: noob.tube.TubeSpecification
+noob_version: 0.1.1.dev231+g30a8286
+
+input:
+  frame:
+    scope: process
+    type: cala.assets.Frame
+
+nodes:
+  gather:
+    type: gather
+    params:
+      n: 4
+    depends:
+      - input.frame
+  downsample:
+    type: cala.nodes.prep.downsample
+    depends:
+      - frames: gather.value
+  return:
+    type: return
+    depends: downsample.frame

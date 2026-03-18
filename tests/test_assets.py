@@ -127,7 +127,7 @@ def test_flush_after_deprecated(four_connected_cells, tmp_path, flush_interval) 
 
     merged_ids = zarr_traces.array[AXIS.id_coord].values[0]
     intact_mask = ~np.isin(zarr_traces.array[AXIS.id_coord].values, merged_ids)
-    zarr_traces.keep(intact_mask)
+    zarr_traces.deprecate_except(intact_mask)
     zarr_traces.append(traces[intact_mask], dim=AXIS.frame_dim)
 
     assert zarr_traces.full_array().equals(xr.concat([traces] * 2, dim=AXIS.frame_dim)[intact_mask])

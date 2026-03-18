@@ -179,9 +179,7 @@ def test_absorb_component(slice_nmf, cataloger, single_cell):
     """
     buff = Buffer(size=100)
     buff.array = single_cell.make_movie().array
-    new_component = slice_nmf.process(
-        buff, energy=buff.array.std(dim=AXIS.frame_dim), detect_radius=10
-    )
+    new_component = slice_nmf.process(buff, energy=buff.array.std(dim=AXIS.frame_dim), cell_size=10)
 
     A = single_cell.footprints.array
 

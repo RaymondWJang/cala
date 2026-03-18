@@ -7,7 +7,7 @@ import pytest
 import tomli_w
 import yaml
 from _pytest.monkeypatch import MonkeyPatch
-from noob.yaml import ConfigYAMLMixin, YamlDumper
+from noob.yaml import ConfigYAMLMixin, YamlRepresenter
 
 
 @pytest.fixture()
@@ -129,7 +129,7 @@ def set_local_yaml(tmp_cwd: Path) -> Callable[[dict[str, Any]], Path]:
 
     def _set_local_yaml(config: dict[str, Any]) -> Path:
         with open(yaml_path, "w") as yfile:
-            yaml.dump(config, yfile, Dumper=YamlDumper)
+            yaml.dump(config, yfile, Dumper=YamlRepresenter)
         return yaml_path
 
     return _set_local_yaml

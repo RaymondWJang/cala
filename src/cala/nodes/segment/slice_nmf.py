@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 import xarray as xr
-from noob import Name
+from noob import Name, process_method
 from noob.node import Node
 from pydantic import Field
 
@@ -27,12 +27,13 @@ class SliceNMF(Node):
 
     _logger = init_logger(__name__)
 
+    @process_method
     def process(
-        self, residuals: Buffer, energy: xr.DataArray, detect_radius: int
+        self, residuals: Buffer, energy: xr.DataArray, cell_size: int
     ) -> tuple[A[list[Footprint], Name("new_fps")], A[list[Trace], Name("new_trs")]]:
 
         if residuals.array.sizes[AXIS.frame_dim] < self.min_frames:
-            return [], []
+            return None, None
 
         fps = []
         trs = []
@@ -41,19 +42,15 @@ class SliceNMF(Node):
 
         while np.max(energy) >= self.detect_thresh:
             # Find and analyze neighborhood of maximum variance
-            slice_ = self._get_max_energy_slice(
-                arr=res, energy_landscape=energy, radius=detect_radius
-            )
+            slice_ = self._get_max_energy_slice(arr=res, energy_landscape=energy, radius=cell_size)
 
             a_new, c_new = self._local_nmf(
                 slice_=slice_,
                 spatial_sizes={k: v for k, v in res.sizes.items() if k in AXIS.spatial_dims},
             )
 
-            l1_norm = np.sum(slice_.values)
-            l1_error = self.error_ / l1_norm
-            l0_norm = np.prod(slice_.shape).astype(float)
-            l0_error = self.error_ / l0_norm
+            l1_error = self.error_ / np.sum(slice_.values)
+            l0_error = self.error_ / np.prod(slice_.shape).astype(float)
 
             energy.loc[{ax: slice_.coords[ax] for ax in AXIS.spatial_dims}] = 0
 
@@ -64,13 +61,10 @@ class SliceNMF(Node):
             else:
                 res.loc[{ax: slice_.coords[ax] for ax in AXIS.spatial_dims}] = l0_error
 
-        return fps, trs
+        return (fps, trs) if fps else (None, None)
 
     def _get_max_energy_slice(
-        self,
-        arr: xr.DataArray,
-        energy_landscape: xr.DataArray,
-        radius: int,
+        self, arr: xr.DataArray, energy_landscape: xr.DataArray, radius: int
     ) -> xr.DataArray:
         """Find neighborhood around point of maximum variance."""
         # Find maximum point
@@ -93,9 +87,7 @@ class SliceNMF(Node):
         return neighborhood
 
     def _local_nmf(
-        self,
-        slice_: xr.DataArray,
-        spatial_sizes: Mapping[Hashable, int],
+        self, slice_: xr.DataArray, spatial_sizes: Mapping[Hashable, int]
     ) -> tuple[xr.DataArray, xr.DataArray]:
         """Perform local rank-1 Non-negative Matrix Factorization.
 
@@ -141,7 +133,7 @@ class SliceNMF(Node):
         )
 
         # normalize against the original video (as in whatever the residual used at the time)
-        factor = slice_.data.max() / c_new.data.max()
+        factor = a_new.max()
         a_new = a_new / factor
         c_new = c_new * factor
 

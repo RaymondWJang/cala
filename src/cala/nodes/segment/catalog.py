@@ -14,7 +14,9 @@ from scipy.sparse.csgraph import connected_components
 from skimage.measure import label
 from xarray import Coordinates
 
-from cala.arrays import AXIS, Footprint, Footprints, Trace, Traces
+from cala.arrays import AXIS, Footprint, Trace
+from cala.arrays.models import Footprints, Traces
+from cala.nodes.segment.quality_control import morphology_filter
 from cala.util import combine_attr_replaces, concat_components, create_id, rank1nmf
 
 
@@ -227,9 +229,9 @@ class Cataloger(Node):
     ) -> tuple[list[xr.DataArray], list[xr.DataArray]]:
         """
         Filters resulting footprints and traces based on quality thresholds
-
         """
-        mask = [np.sum(fp.data > self.val_threshold) > self.cnt_threshold for fp in footprints]
+
+        mask = morphology_filter(footprints, self.val_threshold, self.cnt_threshold)
         footprints = list(compress(footprints, mask))
         traces = list(compress(traces, mask))
 
@@ -324,13 +326,13 @@ def _gather_discrete(
     footprints = []
     traces = []
 
-    if discrete_idx.size > 0:
-        fps, trs = _register(
-            shapes=fps.isel({AXIS.component_dim: discrete_idx}),
-            tracks=trs.isel({AXIS.component_dim: discrete_idx}),
+    for idx in discrete_idx:
+        reg_fps, reg_trs = _register(
+            shapes=fps.isel({AXIS.component_dim: idx}),
+            tracks=trs.isel({AXIS.component_dim: idx}),
         )
-        footprints.append(fps)
-        traces.append(trs)
+        footprints.append(reg_fps)
+        traces.append(reg_trs)
 
     return footprints, traces
 

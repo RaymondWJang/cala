@@ -9,7 +9,7 @@ from natsort import natsorted
 from numpy.typing import NDArray
 from skimage import io
 
-from cala.arrays.assets import Asset
+from cala.arrays.containers import ArrayContainer
 from cala.config import config
 
 
@@ -119,7 +119,9 @@ def stream(
         raise ValueError(f"Unsupported file format: {suffix}")
 
 
-def save_asset(asset: Asset, target_epoch: int, curr_epoch: int, path: str | Path) -> Asset:
+def save_asset(
+    asset: ArrayContainer, target_epoch: int, curr_epoch: int, path: str | Path
+) -> ArrayContainer:
     if target_epoch == curr_epoch:
         zarr_dir = config.user_dir
         try:

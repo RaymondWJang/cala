@@ -1,32 +1,31 @@
-noob_id: ingest-loop
+noob_id: cala-fit
 noob_model: noob.tube.TubeSpecification
 noob_version: 0.1.1.dev209+g1cafe61
 input:
   frame:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.Frame
   traces:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.Traces
   footprints:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.Footprints
   overlaps:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.Overlaps
   pix_stats:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.PixStats
   comp_stats:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.CompStats
   residuals:
     scope: process
-    type: np.ndarray
-
+    type: cala.arrays.Residuals
 
 nodes:
-  trace_frame:
+  fit_trace:
     type: cala.nodes.omf.traces.Tracer
     params:
       tol: 0.001
@@ -36,36 +35,41 @@ nodes:
       - footprints: input.footprints
       - frame: input.frame
       - overlaps: input.overlaps
-  pix_frame:
+  fit_frame_summary:
     type: cala.nodes.omf.pixel_stats.ingest_frame
     depends:
       - pixel_stats: input.pix_stats
       - frame: input.frame
-      - new_traces: trace_frame.latest_trace
+      - new_traces: fit_trace.latest_trace
       - footprints: input.footprints
-  comp_frame:
+  fit_trace_summary:
     type: cala.nodes.omf.component_stats.ingest_frame
     depends:
       - component_stats: input.comp_stats
       - frame: input.frame
-      - new_traces: trace_frame.latest_trace
-  footprints_frame:
+      - new_traces: fit_trace.latest_trace
+  fit_footprints:
     type: cala.nodes.omf.footprints.Footprinter
     params:
       max_iter: 5
       ratio_lb: 0.10
     depends:
       - footprints: input.footprints
-      - pixel_stats: pix_frame.value
-      - component_stats: comp_frame.value
-  residual:
+      - pixel_stats: fit_frame_summary.value
+      - component_stats: fit_trace_summary.value
+  fit_residual:
     type: cala.nodes.omf.residual.Residuer
     depends:
       - frame: input.frame
-      - footprints: footprints_frame.footprints
+      - footprints: fit_footprints.footprints
       - traces: input.traces
       - residuals: input.residuals
   return:
     type: return
     depends:
-      residual.std
+      - energy: fit_residual.std
+      - residual: fit_residual.movie
+      - traces: fit_trace.traces
+      - footprints: fit_footprints.footprints
+      - frame_sum: fit_frame_summary.value
+      - trace_sum: fit_trace_summary.value

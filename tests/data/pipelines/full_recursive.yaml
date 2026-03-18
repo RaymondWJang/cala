@@ -1,0 +1,100 @@
+noob_id: cala-long-recording
+noob_model: noob.tube.TubeSpecification
+noob_version: 0.1.1.dev118+g64d81b7
+
+input:
+  cell_size:
+    scope: tube
+    type: int
+  frame:
+    scope: process
+    type: numpy.ndarray
+  epoch:
+    scope: process
+    type: int
+
+assets:
+  footprints:
+    type: cala.arrays.Footprints
+    params:
+      sparsify: True
+    scope: runner
+    depends: expand.footprints
+  traces:
+    type: cala.arrays.Traces
+    scope: runner
+    params:
+      zarr_path: traces/
+      peek_size: 100
+      flush_interval: 1000
+    depends: expand.traces
+  pix_stats:
+    type: cala.arrays.PixStats
+    scope: runner
+    depends: expand.frame_sum
+  comp_stats:
+    type: cala.arrays.CompStats
+    scope: runner
+    depends: expand.trace_sum
+  overlaps:
+    type: cala.arrays.Overlaps
+    scope: runner
+    depends: expand.overlaps
+  residuals:
+    type: cala.arrays.Buffer
+    params:
+      size: 100
+    scope: runner
+    depends: fit.residuals
+  buffer:
+    scope: runner
+    params:
+      size: 100
+    type: cala.arrays.Buffer
+    depends: buffer.buffer
+
+nodes:
+  frame:
+    type: cala.nodes.prep.package_frame
+    depends:
+      - frame: input.frame
+      - index: input.epoch
+
+  preprocess:
+    type: tube
+    params:
+      tube: cala-preprocess
+    depends:
+      - frame: frame.value
+
+  fit:
+    type: tube
+    params:
+      tube: cala-fit
+    depends:
+      - frame: preprocess.value
+      - traces: assets.traces
+      - overlaps: assets.overlaps
+      - footprints: assets.footprints
+      - pix_stats: assets.pix_stats
+      - comp_stats: assets.comp_stats
+      - residuals: assets.residuals
+  buffer:
+    type: cala.nodes.omf.pixel_stats.fill_buffer
+    depends:
+      - buffer: assets.buffer
+      - frame: preprocess.value
+
+  expand:
+    type: tube
+    params:
+      tube: cala-expand
+    depends:
+      - energy: fit.energy
+      - residual: fit.residual
+      - traces: fit.traces
+      - footprints: fit.footprints
+      - buffer: buffer.buffer
+      - frame_sum: fit.frame_sum
+      - trace_sum: fit.trace_sum
+      - overlaps: assets.overlaps

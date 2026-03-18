@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import pytest
 import xarray as xr
@@ -5,6 +6,9 @@ from noob import SynchronousRunner, Tube
 from noob.node import Node, NodeSpecification
 
 from cala.arrays import AXIS
+from cala.nodes.io import stream
+from cala.nodes.segment.quality_control import separate_by_filter
+from cala.plot import footprint_rims
 
 
 @pytest.fixture(
@@ -25,9 +29,8 @@ def source(request):
 
 
 @pytest.fixture(scope="module")
-def tube(source, tmp_path_factory):
-    tube = Tube.from_specification("cala-odl")
-    tube.nodes["source"] = source
+def tube(tmp_path_factory):
+    tube = Tube.from_specification("cala-odl", {"radius": 10})
     # tube.cube.arrays["traces"].params["zarr_path"] = tmp_path_factory.mktemp("traces")
 
     return tube
@@ -114,13 +117,41 @@ def test_reconstructed_movie(results):
 
     """
     raise NotImplementedError()
-    # elif src_name in ["SingleCellSource", "TwoCellsSource", "SeparateSource"]:
-    # expected = xr.concat(preprocessed_frames, dim=AXIS.frames_dim)
-    # result = (fps.array @ trs.array).transpose(*expected.dims)
-    #
-    # xr.testing.assert_allclose(expected, result.as_numpy(), atol=1e-5, rtol=1e-5)
-    #
-    # elif src_name == "SplitOffSource":
-    # expected = xr.concat(preprocessed_frames, dim=AXIS.frames_dim)
-    # result = (fps.array @ trs.array).transpose(*expected.dims)
-    # raise NotImplementedError("Deprecation not implemented")
+
+
+VIDEOS = [f"long_recording/{i}.avi" for i in range(1)]
+
+
+def test_recursive():
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter("circles_x2.mp4", fourcc, 30.0, (1200, 600))
+
+    gen = stream(VIDEOS)
+    tube = Tube.from_specification("cala-unraveled", {"cell_size": 10})
+    runner = SynchronousRunner(tube)
+    max_frame = np.zeros((600, 600))
+    A = runner.tube.state.assets["footprints"]
+
+    def event_cb(event) -> None:
+        nonlocal max_frame
+        nonlocal A
+        if event["node_id"] == "preprocess":
+            max_frame = np.maximum(max_frame, event["value"].array.values)
+            frame_bgr = cv2.cvtColor(
+                event["value"].array.values.astype(np.uint8) * 2, cv2.COLOR_GRAY2BGR
+            )
+            max_bgr = cv2.cvtColor(max_frame.astype(np.uint8), cv2.COLOR_GRAY2BGR)
+
+            if A.obj.array is not None:
+                accepted, rejected = separate_by_filter(A.obj.array, 0.8, 24)
+                circles = footprint_rims(accepted)
+                frame_bgr[:, :, 0][circles] = 255
+                max_bgr[:, :, 0][circles] = 255
+
+            out.write(np.concatenate([frame_bgr, max_bgr], axis=1))
+
+    runner.add_callback(event_cb)
+    for idx, arr in enumerate(gen):
+        runner.process(frame=arr, epoch=idx)
+
+    out.release()

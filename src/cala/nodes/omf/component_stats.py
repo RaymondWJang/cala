@@ -1,10 +1,13 @@
 import numpy as np
 import xarray as xr
 
-from cala.arrays import AXIS, CompStats, Frame, PopSnap, Traces
+from cala.arrays import AXIS, Frame, PopSnap
+from cala.arrays.models import CompStats, Traces
 
 
-def ingest_frame(component_stats: CompStats, frame: Frame, new_traces: PopSnap) -> CompStats:
+def ingest_frame(
+    component_stats: CompStats, frame: Frame, new_traces: PopSnap, trace_threshold: float = 0.0
+) -> CompStats:
     """
     Update component statistics using current frame and component.
 
@@ -34,6 +37,7 @@ def ingest_frame(component_stats: CompStats, frame: Frame, new_traces: PopSnap) 
 
     # New frame traces
     c_t = new_traces.array
+    c_t[c_t < trace_threshold] = 0
 
     # Update component-wise statistics M_t
     # M_t = ((t-1)/t)M_{t-1} + (1/t)c_t c_t^T

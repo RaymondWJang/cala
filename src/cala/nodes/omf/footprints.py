@@ -7,14 +7,16 @@ from pydantic import BaseModel
 from scipy.sparse import csc_matrix, vstack
 from sparse import COO
 
-from cala.arrays import AXIS, CompStats, Footprints, PixStats
+from cala.arrays import AXIS
+from cala.arrays.models import CompStats, Footprints, PixStats
 from cala.logging import init_logger
 from cala.util import concatenate_coordinates
 
 
 class Footprinter(BaseModel):
     max_iter: int
-    ratio_lb: float = 0.15
+    ratio_lb: float
+    """low bound for footprint value. values lower than this is floored to zero."""
 
     _logger = init_logger(__name__)
 

@@ -1,65 +1,65 @@
-noob_id: segment-loop
+noob_id: cala-expand
 noob_model: noob.tube.TubeSpecification
 noob_version: 0.1.1.dev209+g1cafe61
+
 input:
-  residual:
-    scope: process
-    type: np.ndarray
+  cell_size:
+    scope: tube
+    type: int
   energy:
     scope: process
-    type: np.ndarray
-  radius:
+    type: cala.arrays.Frame
+  residual:
     scope: process
-    type: int
-  footprints:
-    scope: process
-    type: np.ndarray
+    type: cala.arrays.Residual
   traces:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.Traces
+  footprints:
+    scope: process
+    type: cala.arrays.Footprints
   frame_sum:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.PixStats
   trace_sum:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.CompStats
   overlaps:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.Overlaps
   buffer:
     scope: process
-    type: np.ndarray
+    type: cala.arrays.Buffer
+
 nodes:
   nmf:
     type: cala.nodes.segment.SliceNMF
     params:
-      min_frames: 10
-      detect_thresh: 1.0
-      reprod_tol: 0.001
+      min_frames: 100
+      detect_thresh: 3.0
+      reprod_tol: 0.005
     depends:
       - residuals: input.residual
       - energy: input.energy
-      - detect_radius: input.radius
+      - radius: input.cell_size
   catalog:
     type: cala.nodes.segment.Cataloger
     params:
-      age_limit: 100
+      age_limit: 500
       shape_smooth_kwargs:
-        ksize:
-          - 1
-          - 1
+        ksize: [ 1, 1 ]
         sigmaX: 0
       trace_smooth_kwargs:
         sigma: 2
       merge_threshold: 0.95
-      val_threshold: 0.5
-      cnt_threshold: 10
+      val_threshold: 0.8
+      cnt_threshold: 25
     depends:
       - new_fps: nmf.new_fps
       - new_trs: nmf.new_trs
       - existing_fp: input.footprints
       - existing_tr: input.traces
-  detect_update:
+  expand_update:
     type: cala.nodes.segment.update_assets
     depends:
       - new_footprints: catalog.new_footprints
@@ -70,3 +70,11 @@ nodes:
       - component_stats: input.trace_sum
       - overlaps: input.overlaps
       - buffer: input.buffer
+  return:
+    type: return
+    depends:
+      - traces: expand_update.traces
+      - footprints: expand_update.footprints
+      - frame_sum: expand_update.frame_sum
+      - trace_sum: expand_update.trace_sum
+      - overlaps: expand_update.overlaps

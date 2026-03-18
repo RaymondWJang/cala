@@ -2,6 +2,17 @@ noob_id: cala-odl
 noob_model: noob.tube.TubeSpecification
 noob_version: 0.1.1.dev118+g64d81b7
 
+input:
+  source:
+    type: cala.arrays.Frame
+    scope: process
+  epoch:
+    type: int
+    scope: process
+  radius:
+    type: int
+    scope: tube
+
 assets:
   buffer:
     type: cala.arrays.Buffer
@@ -15,11 +26,11 @@ assets:
     scope: runner
   traces:
     type: cala.arrays.Traces
+    scope: runner
     params:
       zarr_path: traces/
       peek_size: 100
       flush_interval: 200
-    scope: runner
   pix_stats:
     type: cala.arrays.PixStats
     scope: runner
@@ -36,40 +47,25 @@ assets:
     scope: runner
 
 nodes:
-  source:
-    type: cala.testing.SingleCellSource
-  counter:
-    type: cala.nodes.prep.counter
   frame:
     type: cala.nodes.prep.package_frame
     depends:
-      - frame: source.frame
-      - index: counter.idx
+      - frame: input.source
+      - index: input.epoch
 
-  #PREPROCESS BEGINS
-  glow:
-    type: cala.nodes.prep.GlowRemover
+  prep:
+    type: tube
+    params:
+      tube: cala-prep
     depends:
       - frame: frame.value
-  radius:
-    type: cala.nodes.prep.SizeEst
-    params:
-      hardset_radius: 5
-    depends:
-      - frame: glow.frame
-  cache:
-    type: cala.nodes.omf.pixel_stats.fill_buffer
-    depends:
-      - buffer: assets.buffer
-      - frame: glow.frame
-  #PREPROCESS ENDS
 
   ingest:
     type: tube
     params:
-      tube: ingest-loop
+      tube: cala-ingest
     depends:
-      - frame: glow.frame
+      - frame: prep.value
       - traces: assets.traces
       - footprints: assets.footprints
       - overlaps: assets.overlaps
@@ -77,14 +73,19 @@ nodes:
       - comp_stats: assets.comp_stats
       - residuals: assets.residuals
 
+  cache:
+    type: cala.nodes.omf.pixel_stats.fill_buffer
+    depends:
+      - buffer: assets.buffer
+      - frame: prep.value
   segment:
     type: tube
     params:
-      tube: segment-loop
+      tube: cala-segment
     depends:
       - residual: assets.residuals
       - energy: ingest.value
-      - radius: radius.radius
+      - radius: input.radius
       - footprints: assets.footprints
       - traces: assets.traces
       - frame_sum: assets.pix_stats
@@ -95,5 +96,4 @@ nodes:
   return:
     type: return
     depends:
-      - raw: frame.value
-      - prep: glow.frame
+      - prep: prep.value
