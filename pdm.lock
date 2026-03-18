@@ -5,7 +5,7 @@
 groups = ["default", "dev", "docs", "gui", "tests"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:93508622fcfdaee0b87d958540f4da4a44eceffb26e0b3185f0faeecd11dfc76"
+content_hash = "sha256:e1aa8ded938ca21abc9f6c6a291eb0092dc5cb5f758eab9b76280d5709fdff1d"
 
 [[metadata.targets]]
 requires_python = ">=3.11"
@@ -1821,7 +1821,7 @@ files = [
 
 [[package]]
 name = "noob"
-version = "1000.0.0"
+version = "1000.0.1"
 requires_python = ">=3.11"
 summary = "A graph processing library for processing graphs"
 dependencies = [
@@ -1833,8 +1833,8 @@ dependencies = [
     "typing-extensions>=4.15.0; python_version < \"3.13\"",
 ]
 files = [
-    { file = "noob-1000.0.0-py3-none-any.whl", hash = "sha256:666befd9856f5f9dca45c606c7f5b8b1cd007d9e4b836f871b33fc0ea689f4f2" },
-    { file = "noob-1000.0.0.tar.gz", hash = "sha256:94cb08c0368b6928da5795dfb72372b1d464ed88f8ca13f1c8ee00ad1d2d4109" },
+    { file = "noob-1000.0.1-py3-none-any.whl", hash = "sha256:96c1e268708658aeec9d25064bb69f0bb736dc77c31996a08f8d39c9400b9b03" },
+    { file = "noob-1000.0.1.tar.gz", hash = "sha256:f5ecfe13697b3db029d89b8d723b1cfe976dab9e30ef1f36737e2326223135ee" },
 ]
 
 [[package]]

@@ -34,7 +34,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "typer>=0.15.3",
     "xarray-validate>=0.0.2",
-    "noob>=1000.0.0",
+    "noob>=1000.0.1",
     "natsort>=8.4.0",
     "pympler>=1.1",
 ]
