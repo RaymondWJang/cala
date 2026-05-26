@@ -112,6 +112,9 @@ dev = [
 [project.scripts]
 cala = "cala.main:cli"
 
+[project.entry-points."noob.add_sources"]
+tubes = "cala.hooks:add_noob_sources"
+
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
