@@ -34,7 +34,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "typer>=0.15.3",
     "xarray-validate>=0.0.2",
-    "noob @ git+https://github.com/miniscope/noob.git",
+    "noob>=1000.1.0",
     "natsort>=8.4.0",
 ]
 keywords = [
@@ -140,6 +140,11 @@ docs = "sphinx-autobuild docs docs/_build/html"
 start.cmd = "npm run dev"
 start.working_dir = "frontend"
 mypy = "mypy"
+lock.composite = [
+    'pdm lock --with :all --python=">=3.11,<3.12"',
+    'pdm lock --with :all --python=">=3.12,<3.13" --append',
+    'pdm lock --with :all --python=">=3.13" --append',
+]
 
 
 [tool.pytest.ini_options]
